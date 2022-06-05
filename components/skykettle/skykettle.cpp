@@ -35,17 +35,25 @@ void SkyKettle::device_online() {
 
 void SkyKettle::device_offline() {
   this->is_authorize = false;
+  this->is_active = false;
+}
+
+void SkyKettle::sync_data() {
+  if(this->is_authorize && this->is_active) {
+    this->send(0x06);
+//    ESP_LOGI("SYNC", "TS = 0x%x", this->sync_data_time);
+  }
 }
 
 void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
-  if((this->cup_state.algorithm & 0x07) 
-      && (((temp - this->cup_state.temp_last) >= 1) 
-      && ((stamp - this->cup_state.time_last) < 1))) {
-    this->cup_state.temp_last = temp;
-    this->cup_state.time_last = stamp;
-    this->send(0x04);
-    return;
-  }
+//  if((this->cup_state.algorithm & 0x07) 
+//      && (((temp - this->cup_state.temp_last) >= 1) 
+//      && ((stamp - this->cup_state.time_last) < 1))) {
+//    this->cup_state.temp_last = temp;
+//    this->cup_state.time_last = stamp;
+//    this->send(0x04);
+//    return;
+//  }
   this->cup_state.temp_last = temp;
   this->cup_state.time_last = stamp;
       
@@ -156,7 +164,8 @@ void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
 }
 
 void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp) {
-  ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
+  if((data[1] == this->cmd_count) && (data[2] != 0x06))
+    ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
   if(signal_strength_ != nullptr)
     signal_strength_->publish_state(this->rssi);
@@ -173,85 +182,96 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
     case 0x03: {
       if((data[1] == this->cmd_count) && data[3]) {
         this->power_->publish_state(true);
+        this->send(0x06);
       }
       break;
     }
     case 0x04: {
       if((data[1] == this->cmd_count) && data[3]) {
         this->power_->publish_state(false);
+        this->send(0x47);
       }
       break;
     }
     case 0x06: {
-      bool new_data = false;
-
-      // обновление целевая температура
-      if(data_len == 13) {
-        uint8_t target;
-        if((data[4] > 1) && (data[4] < 5))
-          target = 40 + (data[4] - 1) * 15;
-        else
-          target = (data[4] == 5) ? 95 : 0;
-        if(this->kettle_state.target != target) {
+      if(data[1] == this->cmd_count) {
+        data[1] = 0;
+        uint8_t res = 0;
+        for(int i=0; i<data_len; i++)
+          res += data[i];
+        res = 0 - res;
+        if(res == this->sum_06)
+          break;
+        this->sum_06 = res;
+        ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
+              format_hex_pretty(data, data_len).c_str());
+        bool new_data = false;
+        // обновление целевая температура
+        if((data_len == 13) && (this->kettle_state.numeric_target != data[4])) {
+          this->kettle_state.numeric_target = data[4];
+          uint8_t target;
+          if((data[4] > 1) && (data[4] < 5))
+            target = 40 + (data[4] - 1) * 15;
+          else
+            target = (data[4] == 5) ? 95 : 0;
           this->kettle_state.target = target;
           new_data = true;
         }
-      }
-      else if((data_len == 20) && (this->kettle_state.target != data[5])) {
-        this->kettle_state.target = data[5];
-        new_data = true;
-      }
-      if(new_data) {
-        
-        new_data = false;
-      }
-
-      // обновление состояния выключателя чайника
-      if(this->kettle_state.status != data[11]) {
-        this->kettle_state.status = data[11];
-        if(this->kettle_state.status) {
-          this->kettle_state.power = true;
-          this->power_->publish_state(true);
-          if(this->kettle_state.status & 0x02)
-            this->cup_state.algorithm = 1;
+        else if((data_len == 20) && (this->kettle_state.target != data[5])) {
+          this->kettle_state.target = data[5];
+          new_data = true;
         }
-        else {
-          this->kettle_state.power = false;
-          this->power_->publish_state(false);
-          this->cup_state.algorithm = 0;
+        if(new_data) {
+          
+          new_data = false;
         }
-      }
 
-      // обновление температура воды
-      if((data_len == 13) && (this->kettle_state.temperature != data[5])) {
-        this->kettle_state.temperature = data[5];
-        new_data = true;
-      }
-      else if((data_len == 20) && (this->kettle_state.temperature != data[8])) {
-        this->kettle_state.temperature = data[8];
-        new_data = true;
-      }
-      if(new_data) {
-        this->temperature_->publish_state(this->kettle_state.temperature);
-        cup_engine(this->kettle_state.temperature, timestamp);
-        if(cup_state.value_finale != 0.0) {
-          float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
-          if(cw != this->kettle_state.cup_quantity) {
-            this->kettle_state.cup_quantity = cw;
-            this->kettle_state.water_volume = cw * this->cup_state.cup_volume;
-            ESP_LOGI(TAG, "Cup Quantity: %f,  Water Volume: %d", 
-                    this->kettle_state.cup_quantity, 
-                    this->kettle_state.water_volume);
-            if(this->cup_quantity_ != nullptr)
-              this->cup_quantity_->publish_state(this->kettle_state.cup_quantity);
-            if(this->water_volume_ != nullptr)
-              this->water_volume_->publish_state(this->kettle_state.water_volume);
+        // обновление состояния выключателя чайника
+        if(this->kettle_state.status != data[11]) {
+          this->kettle_state.status = data[11];
+          if(this->kettle_state.status) {
+            this->kettle_state.power = true;
+            this->power_->publish_state(true);
+            if(this->kettle_state.status & 0x02)
+              this->cup_state.algorithm = 1;
+          }
+          else {
+            this->kettle_state.power = false;
+            this->power_->publish_state(false);
+            this->cup_state.algorithm = 0;
           }
         }
-        new_data = false;
+
+        // обновление температура воды
+        if((data_len == 13) && (this->kettle_state.temperature != data[5])) {
+          this->kettle_state.temperature = data[5];
+          new_data = true;
+        }
+        else if((data_len == 20) && (this->kettle_state.temperature != data[8])) {
+          this->kettle_state.temperature = data[8];
+          new_data = true;
+        }
+        if(new_data) {
+          this->temperature_->publish_state(this->kettle_state.temperature);
+          cup_engine(this->kettle_state.temperature, timestamp);
+          if(cup_state.value_finale != 0.0) {
+            float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
+            if(cw != this->kettle_state.cup_quantity) {
+              this->kettle_state.cup_quantity = cw;
+              this->kettle_state.water_volume = cw * this->cup_state.cup_volume;
+              ESP_LOGI(TAG, "Cup Quantity: %f,  Water Volume: %d", 
+                      this->kettle_state.cup_quantity, 
+                      this->kettle_state.water_volume);
+              if(this->cup_quantity_ != nullptr)
+                this->cup_quantity_->publish_state(this->kettle_state.cup_quantity);
+              if(this->water_volume_ != nullptr)
+                this->water_volume_->publish_state(this->kettle_state.water_volume);
+            }
+          }
+          new_data = false;
+        }
+        this->is_active = true;
       }
-      
-      
       break;
     }
     case 0x47: {
@@ -265,7 +285,7 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
         this->kettle_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
         if(work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->kettle_state.work_cycles);
-        send(0x06);
+        this->send(0x06);
       }
       break;
     }
@@ -286,6 +306,7 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
 }
 
 void SkyKettle::send(uint8_t command) {
+  this->is_active = false;
   if(++this->cmd_count == 0)
     this->cmd_count = 1;
   this->send_data_len = 0;
@@ -327,7 +348,7 @@ void SkyKettle::send(uint8_t command) {
     esp_err_t status = esp_ble_gattc_write_char( this->gattc_if, this->conn_id, 
               this->tx_char_handle, this->send_data_len, this->send_data,
               ESP_GATT_WRITE_TYPE_RSP, ESP_GATT_AUTH_REQ_NONE);
-    if (status == ESP_GATT_OK) {
+    if ((status == ESP_GATT_OK) && (this->send_data[2] != 0x06)) {
         ESP_LOGI(TAG, "SEND: Send data: %s", format_hex_pretty(this->send_data, this->send_data_len).c_str());
         this->send_data_len = 0;
     }

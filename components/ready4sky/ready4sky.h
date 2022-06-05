@@ -40,6 +40,7 @@ class R4SDriver {
     virtual void parse_response(uint8_t *data, int8_t size, uint32_t timestamp) = 0;
     virtual void device_online() = 0;
     virtual void device_offline() = 0;
+    virtual void sync_data() = 0;
     
     void set_address(uint64_t address) { this->address = address; }
     void set_model(std::string model) { this->usr_model = model; }
@@ -71,13 +72,14 @@ class R4SDriver {
     std::string mnf_model = ""; // Model specified by the manufacturer
     uint8_t type = 0;
     
-    bool is_authorize = false;
+    bool    is_authorize = false;
     uint8_t cmd_count = 1;
     uint8_t notify_data[BLE_BUFF_SIZE];
     int8_t  notify_data_len = 0;
-    int32_t  notify_data_time = 0;
+    int32_t notify_data_time = 0;
     uint8_t send_data[BLE_BUFF_SIZE];
     int8_t  send_data_len = 0;
+    int32_t sync_data_time = 0;
 
   protected:
     DrvState state_;

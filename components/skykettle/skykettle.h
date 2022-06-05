@@ -24,6 +24,7 @@ struct KettleState {
   uint8_t     status;
   uint8_t     temperature;
   uint8_t     target;
+  uint8_t     numeric_target;
   uint32_t    energy;
   uint32_t    work_cycles;
   uint32_t    work_time;
@@ -58,6 +59,7 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp) override;
     void device_online() override;
     void device_offline() override;
+    void sync_data() override;
 
     void send(uint8_t command);
     void cup_engine(uint8_t temp, uint32_t stamp);
@@ -75,6 +77,8 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     
     void set_power(switch_::Switch *power) { this->power_ = power; }
     
+    bool is_active = false;
+    uint8_t sum_06 = 0;
     KettleState kettle_state;
     CupEngineState  cup_state;         // параметры механизма расчета чашек воды
     
