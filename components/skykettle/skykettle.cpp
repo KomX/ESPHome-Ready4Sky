@@ -195,6 +195,7 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
     }
     case 0x06: {
       if(data[1] == this->cmd_count) {
+        this->is_active = true;
         data[1] = 0;
         uint8_t res = 0;
         for(int i=0; i<data_len; i++)
@@ -270,7 +271,6 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
           }
           new_data = false;
         }
-        this->is_active = true;
       }
       break;
     }
