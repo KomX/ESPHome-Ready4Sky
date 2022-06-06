@@ -191,12 +191,6 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
           bool is_present = false;
           bool is_busy = true;
           for(auto *driver : global_r4s_engine->drivers_) {
-            auto now = global_r4s_engine->get_time()->now();
-            if (now.is_valid())
-              if(driver->sync_data_time <= now.timestamp) {
-                driver->sync_data_time = now.timestamp + 1;
-                driver->sync_data();
-              }
             if(driver->address == rst_address) {
               is_present = true;
               driver->rssi = param->scan_rst.rssi;
@@ -209,6 +203,14 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
                   driver->address_type = param->scan_rst.ble_addr_type;
                   driver->mnf_model = rst_model;
                 }
+              }
+              else if(driver->state() == DrvState::ESTABLISHED) {
+                auto now = global_r4s_engine->get_time()->now();
+                if (now.is_valid())
+                  if(now.timestamp >= driver->sync_data_time) {
+                    driver->sync_data_time = now.timestamp + driver->sync_data_period;
+                    driver->sync_data();
+                  }
               }
               break;
             }

@@ -48,14 +48,14 @@ SkyKettle = skykettle_ns.class_("SkyKettle", cg.Component, ready4sky.R4SDriver)
 
 SkyKettlePowerSwitch = skykettle_ns.class_("SkyKettlePowerSwitch", switch.Switch)
 
-MODEL_TYPE = {"RK-G200":    1,
-              "RK-G200S":   2, "RK-G201S":  2, "RK-G202S": 2, "RK-G203S": 2, "RK-G204S": 2, 
-              "RK-G210S":   4, "RK-G211S":  4, "RK-G212S": 4, "RK-G213S": 4, "RK-G214S": 4, "RK-G215S": 4, 
-              "RK-G233S":   8, "RK-G240S":  8, 
-              "RK-M136S":  16, "RK-M139S":  16,
-              "RK-M170S":  32, "RK-M171S":  32, 
-              "RK-M173S":  64, 
-              "RK-M215S": 128, "RK-M216S": 128, "RK-M223S": 128,
+MODEL_TYPE = {"RK-G200":   4,
+              "RK-G200S":  8, "RK-G201S":  8, "RK-G202S": 8, "RK-G203S": 8, "RK-G204S": 8, 
+              "RK-G210S":  8, "RK-G211S":  8, "RK-G212S": 8, "RK-G213S": 8, "RK-G214S": 8, "RK-G215S": 8, 
+              "RK-G233S": 16, "RK-G240S": 16, 
+              "RK-M136S": 64, "RK-M139S": 64,
+              "RK-M170S":  1, "RK-M171S":  1, 
+              "RK-M173S":  2, 
+              "RK-M215S": 32, "RK-M216S": 32, "RK-M223S": 32,
 }
 
 CONF_CUP_CORRECT = "cup_correction"

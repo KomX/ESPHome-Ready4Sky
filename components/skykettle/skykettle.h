@@ -19,17 +19,17 @@ namespace skykettle {
 namespace r4s = esphome::ready4sky;
 
 struct KettleState {
-  std::string name = "";
-  uint8_t     type = 0;
+  uint8_t     type;
   uint8_t     status;
   uint8_t     temperature;
   uint8_t     target;
   uint8_t     numeric_target;
+  uint8_t     programm;
   uint32_t    energy;
   uint32_t    work_cycles;
   uint32_t    work_time;
-  float       cup_quantity = 0.0;
-  uint16_t    water_volume = 0.0;
+  float       cup_quantity;
+  uint16_t    water_volume;
   float       version;
   bool        power;
   bool        lock;
@@ -78,7 +78,6 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void set_power(switch_::Switch *power) { this->power_ = power; }
     
     bool is_active = false;
-    uint8_t sum_06 = 0;
     KettleState kettle_state;
     CupEngineState  cup_state;         // параметры механизма расчета чашек воды
     

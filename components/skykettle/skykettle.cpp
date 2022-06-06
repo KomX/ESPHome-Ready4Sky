@@ -19,6 +19,7 @@ void SkyKettle::setup() {
     this->mark_failed();
   }
   this->set_state(r4s::DrvState::IDLE);
+  this->kettle_state.type = this->type;
   
 }
 
@@ -90,21 +91,21 @@ void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
         break;
       }
       case 10: { // 8 + 2 - старт долгого и короткого результата
-        if(temp == this->cup_state.temp_start_1) {
+        if(temp >= this->cup_state.temp_start_1) {
           this->cup_state.time_start_1 = stamp;
           this->cup_state.phase = 0x04;
         }
         break;
       }
       case 11: { // 8 + 3 - старт только долгого результата
-        if(temp == this->cup_state.temp_start_1) {
+        if(temp >= this->cup_state.temp_start_1) {
           this->cup_state.time_start_1 = stamp;
           this->cup_state.phase = 0x05;
         }
         break;
       }
       case 12: { // 8 + 4 - стоп короткого результата
-        if(temp == this->cup_state.temp_stop_1) {
+        if(temp >= this->cup_state.temp_stop_1) {
           this->cup_state.value_finale = 
                 (float)(stamp - this->cup_state.time_start_1) / (float)(temp - this->cup_state.temp_start_1);
           this->cup_state.value_temp = this->cup_state.value_finale;
@@ -113,7 +114,7 @@ void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
         break;
       }
       case 13: { // 8 + 5 - стоп долгого результата и расчет
-        if(temp == this->cup_state.temp_stop_2) {
+        if(temp >= this->cup_state.temp_stop_2) {
           this->cup_state.value_finale = 
                 (float)(stamp - cup_state.time_start_1) / (float)(temp - cup_state.temp_start_1);
           this->cup_state.phase = 0x07;
@@ -122,7 +123,7 @@ void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
       }
       case 14: { // 8 + 6 - стоп долгого результата и расчет среднего
         this->cup_state.value_finale = 0.0;
-        if(temp == this->cup_state.temp_stop_2) {
+        if(temp >= this->cup_state.temp_stop_2) {
           this->cup_state.value_finale = 
                 (cup_state.value_temp + 
                 (float)(stamp - cup_state.time_start_1) / (float)(temp - cup_state.temp_start_1)) * 0.5;
@@ -164,8 +165,7 @@ void SkyKettle::cup_engine(uint8_t temp, uint32_t stamp) {
 }
 
 void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp) {
-  if((data[1] == this->cmd_count) && (data[2] != 0x06))
-    ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
+  ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
   if(signal_strength_ != nullptr)
     signal_strength_->publish_state(this->rssi);
@@ -174,41 +174,38 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
     case 0x01: {
       if((data[1] == this->cmd_count) && data[3]) {
         this->kettle_state.version = data[3] + data[4]*0.01;
-        ESP_LOGI(TAG, "Version: %f", this->kettle_state.version);
+        ESP_LOGI(TAG, "Version: %2.2f", this->kettle_state.version);
         this->send(0x47);
       }
       break;
     }
     case 0x03: {
       if((data[1] == this->cmd_count) && data[3]) {
-        this->power_->publish_state(true);
-        this->send(0x06);
+        if(this->kettle_state.type & 0x08) // RK-G2xxS 
+          this->send(0x06);
+//        this->power_->publish_state(true);
+//        this->is_active = true;
       }
       break;
     }
     case 0x04: {
       if((data[1] == this->cmd_count) && data[3]) {
-        this->power_->publish_state(false);
+//        this->power_->publish_state(false);
+        if(this->kettle_state.type & 0x08)
         this->send(0x47);
       }
       break;
     }
     case 0x06: {
-      if(data[1] == this->cmd_count) {
-        this->is_active = true;
-        data[1] = 0;
-        uint8_t res = 0;
-        for(int i=0; i<data_len; i++)
-          res += data[i];
-        res = 0 - res;
-        if(res == this->sum_06)
-          break;
-        this->sum_06 = res;
-        ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
-              format_hex_pretty(data, data_len).c_str());
-        bool new_data = false;
-        // обновление целевая температура
-        if((data_len == 13) && (this->kettle_state.numeric_target != data[4])) {
+      bool new_data = false;
+      // обновление целевой температуры
+      if(this->kettle_state.type & 0x7E) // RK-M173S, RK-G200, RK-G2xxS, RK-M13xS, RK-M21xS, RK-M223S
+        if(this->kettle_state.target != data[5]) {
+          this->kettle_state.target = data[5];
+          new_data = true;
+        }
+      if(this->kettle_state.type & 0x01) // RK-M171S, RK-M172S
+        if(this->kettle_state.numeric_target != data[4]) {
           this->kettle_state.numeric_target = data[4];
           uint8_t target;
           if((data[4] > 1) && (data[4] < 5))
@@ -216,62 +213,74 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
           else
             target = (data[4] == 5) ? 95 : 0;
           this->kettle_state.target = target;
-          new_data = true;
-        }
-        else if((data_len == 20) && (this->kettle_state.target != data[5])) {
-          this->kettle_state.target = data[5];
-          new_data = true;
-        }
-        if(new_data) {
-          
-          new_data = false;
-        }
-
-        // обновление состояния выключателя чайника
-        if(this->kettle_state.status != data[11]) {
-          this->kettle_state.status = data[11];
-          if(this->kettle_state.status) {
-            this->kettle_state.power = true;
-            this->power_->publish_state(true);
-            if(this->kettle_state.status & 0x02)
-              this->cup_state.algorithm = 1;
+            new_data = true;
           }
-          else {
-            this->kettle_state.power = false;
-            this->power_->publish_state(false);
-            this->cup_state.algorithm = 0;
-          }
-        }
-
-        // обновление температура воды
-        if((data_len == 13) && (this->kettle_state.temperature != data[5])) {
-          this->kettle_state.temperature = data[5];
-          new_data = true;
-        }
-        else if((data_len == 20) && (this->kettle_state.temperature != data[8])) {
+      if(new_data) {
+        
+        new_data = false;
+      }
+      // обновление программного режима
+      if(this->kettle_state.programm != data[3]) {
+        this->kettle_state.programm = data[3];
+        new_data = true;
+      }
+      if(new_data) {
+        
+        new_data = false;
+      }
+      // обновление температура воды
+      if(this->kettle_state.type & 0x78) // RK-G2xxS, RK-M13xS, RK-M21xS, RK-M223S
+        if(this->kettle_state.temperature != data[8]) {
           this->kettle_state.temperature = data[8];
           new_data = true;
         }
-        if(new_data) {
-          this->temperature_->publish_state(this->kettle_state.temperature);
-          cup_engine(this->kettle_state.temperature, timestamp);
-          if(cup_state.value_finale != 0.0) {
-            float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
-            if(cw != this->kettle_state.cup_quantity) {
-              this->kettle_state.cup_quantity = cw;
-              this->kettle_state.water_volume = cw * this->cup_state.cup_volume;
-              ESP_LOGI(TAG, "Cup Quantity: %f,  Water Volume: %d", 
-                      this->kettle_state.cup_quantity, 
-                      this->kettle_state.water_volume);
-              if(this->cup_quantity_ != nullptr)
-                this->cup_quantity_->publish_state(this->kettle_state.cup_quantity);
-              if(this->water_volume_ != nullptr)
-                this->water_volume_->publish_state(this->kettle_state.water_volume);
-            }
+      if(this->kettle_state.type & 0x06) // RK-M173S, RK-G200
+        if(this->kettle_state.temperature != data[13]) {
+          this->kettle_state.temperature = data[13];
+          new_data = true;
+        }
+      if(this->kettle_state.type & 0x01) // RK-M171S, RK-M172S
+        if(this->kettle_state.temperature != data[5]) {
+          this->kettle_state.temperature = data[5];
+          new_data = true;
+        }
+      if(new_data) {
+        this->temperature_->publish_state(this->kettle_state.temperature);
+        cup_engine(this->kettle_state.temperature, timestamp);
+        if(cup_state.value_finale != 0.0) {
+          float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
+          if(cw != this->kettle_state.cup_quantity) {
+            this->kettle_state.cup_quantity = cw;
+            this->kettle_state.water_volume = cw * this->cup_state.cup_volume;
+            ESP_LOGI(TAG, "Cup Quantity: %f,  Water Volume: %d", 
+                    this->kettle_state.cup_quantity, 
+                    this->kettle_state.water_volume);
+            if(this->cup_quantity_ != nullptr)
+              this->cup_quantity_->publish_state(this->kettle_state.cup_quantity);
+            if(this->water_volume_ != nullptr)
+              this->water_volume_->publish_state(this->kettle_state.water_volume);
           }
-          new_data = false;
+        }
+        new_data = false;
+      }
+
+      // обновление состояния выключателя чайника
+      if(this->kettle_state.status != data[11]) {
+        this->kettle_state.status = data[11];
+        if(this->kettle_state.status != 0x00) {
+          this->kettle_state.power = true;
+          this->power_->publish_state(true);
+          if(this->kettle_state.status & 0x02)
+            this->cup_state.algorithm = 1;
+        }
+        else {
+          this->kettle_state.power = false;
+          this->power_->publish_state(false);
+          this->cup_state.algorithm = 0;
         }
       }
+      if(this->kettle_state.type & 0x08) // RK-G2xxS 
+        this->is_active = true;
       break;
     }
     case 0x47: {
@@ -292,7 +301,7 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
     case 0xFF: {
       if((data[1] == this->cmd_count) && data[3]) {
         this->is_authorize = true;
-        ESP_LOGI(TAG, "%s autorized.", this->kettle_state.name.c_str());
+        ESP_LOGI(TAG, "%s autorized.", this->mnf_model.c_str());
         this->send(0x01);
       }
       else

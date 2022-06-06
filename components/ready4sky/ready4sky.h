@@ -80,6 +80,7 @@ class R4SDriver {
     uint8_t send_data[BLE_BUFF_SIZE];
     int8_t  send_data_len = 0;
     int32_t sync_data_time = 0;
+    int8_t  sync_data_period = 1;
 
   protected:
     DrvState state_;
