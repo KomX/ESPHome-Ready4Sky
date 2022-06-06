@@ -8,6 +8,7 @@ from esphome.components import(
 #  fan,
 #  light,
 #  number,
+  select,
   sensor,
   switch,
 #  text_sensor,
@@ -61,6 +62,7 @@ MODEL_TYPE = {"RK-G200":   4,
 CONF_CUP_CORRECT = "cup_correction"
 CONF_CUP_QUANTITY = "cup_quantity"
 CONF_CUP_VOLUME = "cup_volume"
+CONF_DRINK = "drink"
 CONF_WATER_VOLUME = "water_volume"
 CONF_WORK_CYCLES = "work_cycles"
 CONF_WORK_TIME = "work_time"
@@ -79,7 +81,7 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
       cv.Required(CONF_MODEL): cv.string,
       cv.Optional(CONF_CUP_VOLUME, default="250"): cv.int_range(min=100, max=350),
-      cv.Optional(CONF_CUP_CORRECT, default="1.534286"): cv.positive_float,
+      cv.Optional(CONF_CUP_CORRECT, default="1.0"): cv.positive_float,
       cv.Required(CONF_SENSORS): cv.All(
         cv.Schema(
           {
