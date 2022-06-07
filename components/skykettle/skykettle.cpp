@@ -175,13 +175,16 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
       if((data[1] == this->cmd_count) && data[3]) {
         this->kettle_state.version = data[3] + data[4]*0.01;
         ESP_LOGI(TAG, "Version: %2.2f", this->kettle_state.version);
-        this->send(0x47);
+        if(this->kettle_state.type & 0x01)
+          this->send(0x06);
+        else
+          this->send(0x47);
       }
       break;
     }
     case 0x03: {
       if((data[1] == this->cmd_count) && data[3]) {
-        if(this->kettle_state.type & 0x08) // RK-G2xxS 
+        if(this->kettle_state.type & 0x09) // RK-M171S, RK-M172S, RK-G2xxS 
           this->send(0x06);
 //        this->power_->publish_state(true);
 //        this->is_active = true;
@@ -190,9 +193,10 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
     }
     case 0x04: {
       if((data[1] == this->cmd_count) && data[3]) {
-//        this->power_->publish_state(false);
-        if(this->kettle_state.type & 0x08)
-        this->send(0x47);
+        if(this->kettle_state.type & 0x01)
+          this->send(0x06);
+        else
+          this->send(0x47);
       }
       break;
     }
@@ -279,7 +283,7 @@ void SkyKettle::parse_response(uint8_t *data, int8_t data_len, uint32_t timestam
           this->cup_state.algorithm = 0;
         }
       }
-      if(this->kettle_state.type & 0x08) // RK-G2xxS 
+      if(this->kettle_state.type & 0x09) // RK-M171S, RK-M172S, RK-G2xxS 
         this->is_active = true;
       break;
     }
