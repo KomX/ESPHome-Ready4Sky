@@ -7,24 +7,24 @@
 skykettle:
   mac_address: F4:AC:78:85:3C:53  
   model: RK-M216S  
-  cup_volume: 275
-  cup_correction: 1.534286 # correction for RK-M216S
+  cup_volume: 250
+  cup_correction: 1.0
   sensors:
     temperature:
       name: ${kettle} Temperature
     cup_quantity:
       name: ${kettle} Cup(s)
-    water_volume: 
+    water_volume:
       name: ${kettle} Water Volume
     signal_strength:
-      name: ${kettle} RSSI 
+      name: ${kettle} RSSI
     work_cycles:
-      name: ${kettle} Work Cycles 
-    work_time: # (Optional) сенсор наработки (в часах) 
-      name: ${kettle} Work Time 
-    switches:
-      power: # (Required) тумблер включения ) 
-        name: ${kettle} Power
+      name: ${kettle} Work Cycles
+    work_time:
+      name: ${kettle} Work Time
+  switches:
+    power:
+      name: ${kettle} Power
 ```
 #### Пояснения к коду	
 >**mac_address** *(Required)* Параметр. MAC адрес чайника.  
