@@ -277,7 +277,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
         if(global_r4s_engine->scan_monitor_ && (global_r4s_engine->new_scan_dev_.size() > 0)) { 
           ESP_LOGI(TAG, "New devices (%d):", global_r4s_engine->new_scan_dev_.size() );
           for(auto &nsd : global_r4s_engine->new_scan_dev_) {
-            ESP_LOGI(TAG, "   Nane: %s  MAC: %s  RSSI: %d dBm", 
+            ESP_LOGI(TAG, "   Name: %s  MAC: %s  RSSI: %d dBm", 
                   nsd.name.c_str(), global_r4s_engine->address_str(nsd.address).c_str(), nsd.rssi);
           }
 //          if(global_r4s_engine->new_scan_dev_.size() > 3)
