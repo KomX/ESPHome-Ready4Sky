@@ -1,6 +1,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
+#include <string>
 #include "skysmoke.h"
 
 #ifdef USE_ESP32
@@ -24,30 +25,43 @@ void SkySmoke::setup() {
 }
 
 void SkySmoke::dump_config() {
-  ESP_LOGCONFIG(TAG, "SkyKettle:");
+  ESP_LOGCONFIG(TAG, "SkySmoke:");
   ESP_LOGCONFIG(TAG, "  Model: %s (type %d)", this->usr_model.c_str(), this->type);
   ESP_LOGCONFIG(TAG, "  MAC Address: %s", this->parent()->address_str(this->address).c_str());
 }
 
-void SkySmoke::device_online() {
-  this->send(0xFF);
+void SkySmoke::device_online_() {
+  this->send_(0xFF);
 }
 
-void SkySmoke::device_offline() {
+void SkySmoke::device_offline_() {
   this->is_authorize = false;
   this->is_active = false;
 }
 
-void SkySmoke::sync_data() {
+void SkySmoke::sync_data_() {
   if(this->is_authorize && this->is_active)
-    this->send(0x06);
+    this->send_(0x06);
 }
 
-void SkySmoke::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp) {
-  ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
+void SkySmoke::verify_contig_() {
+  size_t pos = this->mnf_model.find("RSS");
+  if (pos != std::string::npos)
+    this->conf_error = false;
+  pos = this->mnf_model.find("RFS-HSS");
+  if (pos != std::string::npos)
+    this->conf_error = false;
+  if(this->conf_error)
+    ESP_LOGE(TAG, "!!! %s product and %s component are not compatible !!!", this->mnf_model.c_str(), TAG);
+}
+
+void SkySmoke::parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp) {
+  ESP_LOGD(TAG, "%s notify value: %s", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
-  if(this->signal_strength_ != nullptr)
+  if((this->signal_strength_ != nullptr) && (timestamp >= this->update_rssi_time)) {
     this->signal_strength_->publish_state(this->rssi);
+    this->update_rssi_time = timestamp + this->update_rssi_period;  
+  }
 
   switch(data[2]) {
     case 0x01: {
@@ -55,7 +69,7 @@ void SkySmoke::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp
         this->smoke_state.version = data[3];
         this->smoke_state.relise = data[4];
         ESP_LOGI(TAG, "Version: %2.2f", (data[3] + data[4]*0.01));
-        this->send(0x06);
+        this->send_(0x06);
       }
       break;
     }
@@ -87,10 +101,10 @@ void SkySmoke::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp
       if((data[1] == this->cmd_count) && data[3]) {
         this->is_authorize = true;
         ESP_LOGI(TAG, "%s autorized.", this->mnf_model.c_str());
-        this->send(0x01);
+        this->send_(0x01);
       }
       else
-        this->send(0xFF);
+        this->send_(0xFF);
       break;
     }
     default: {
@@ -99,7 +113,7 @@ void SkySmoke::parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp
   }
 }
 
-void SkySmoke::send(uint8_t command) {
+void SkySmoke::send_(uint8_t command) {
   this->is_active = false;
   if(++this->cmd_count == 0)
     this->cmd_count = 1;

@@ -21,11 +21,11 @@ namespace r4s = esphome::ready4sky;
 
 struct SmokeState {
   uint8_t     type;
-  uint8_t     temperature;
-  uint8_t     battery_level;
+  uint8_t     temperature = 0xFF;
+  uint8_t     battery_level = 0xFF;
   uint8_t     version;
   uint8_t     relise;
-  uint8_t     smoke;
+  uint8_t     smoke = 0xFF;
 };
 
 class SkySmoke : public r4s::R4SDriver, public Component {
@@ -33,13 +33,6 @@ class SkySmoke : public r4s::R4SDriver, public Component {
     float get_setup_priority() const override;
     void setup() override;
     void dump_config() override;
-
-    void parse_response(uint8_t *data, int8_t data_len, uint32_t timestamp) override;
-    void device_online() override;
-    void device_offline() override;
-    void sync_data() override;
-
-    void send(uint8_t command);
 
     void set_smoke(binary_sensor::BinarySensor *smoke) { this->smoke_ = smoke; }
     void set_temperature(sensor::Sensor *temperature) { this->temperature_ = temperature; }
@@ -50,6 +43,13 @@ class SkySmoke : public r4s::R4SDriver, public Component {
     SmokeState smoke_state;
 
   protected:
+    void send_(uint8_t command);
+    void parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp) override;
+    void device_online_() override;
+    void device_offline_() override;
+    void sync_data_() override;
+    void verify_contig_() override;
+    
     binary_sensor::BinarySensor *smoke_{nullptr};
     sensor::Sensor *temperature_{nullptr};
     sensor::Sensor *signal_strength_{nullptr};
