@@ -15,7 +15,7 @@
 namespace esphome {
 namespace ready4sky {
 
-#define BLE_BUFF_SIZE 32
+#define BLE_BUFF_SIZE 24
 
 enum class DrvState {
   IDLE, // Connection is idle, no device detected.
@@ -37,10 +37,11 @@ class R4SEngine;
 
 class R4SDriver {
   public:
-    virtual void parse_response(uint8_t *data, int8_t size, uint32_t timestamp) = 0;
-    virtual void device_online() = 0;
-    virtual void device_offline() = 0;
-    virtual void sync_data() = 0;
+    virtual void parse_response_(uint8_t *data, int8_t size, uint32_t timestamp) = 0;
+    virtual void device_online_() = 0;
+    virtual void device_offline_() = 0;
+    virtual void sync_data_() = 0;
+    virtual void verify_contig_() = 0;
     
     void set_address(uint64_t address) { this->address = address; }
     void set_model(std::string model) { this->usr_model = model; }
@@ -73,6 +74,7 @@ class R4SDriver {
     uint8_t type = 0;
     
     bool    is_authorize = false;
+    bool    conf_error = true;
     uint8_t cmd_count = 1;
     uint8_t notify_data[BLE_BUFF_SIZE];
     int8_t  notify_data_len = 0;
@@ -81,6 +83,8 @@ class R4SDriver {
     int8_t  send_data_len = 0;
     int32_t sync_data_time = 0;
     int8_t  sync_data_period = 1;
+    int32_t update_rssi_time = 0;
+    int8_t  update_rssi_period = 1;
 
   protected:
     DrvState state_;

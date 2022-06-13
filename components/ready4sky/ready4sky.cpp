@@ -195,13 +195,20 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
               is_present = true;
               driver->rssi = param->scan_rst.rssi;
               if(driver->state() == DrvState::IDLE) {
-                driver->set_state(DrvState::DISCOVERED);
-                is_busy = false;
                 if (driver->remote_bda[0] == 0) {
                   for (uint8_t i = 0; i < ESP_BD_ADDR_LEN; i++)
                     driver->remote_bda[i] = param->scan_rst.bda[i];
                   driver->address_type = param->scan_rst.ble_addr_type;
                   driver->mnf_model = rst_model;
+                  driver->verify_contig_();
+                }
+                if(!driver->conf_error) {
+                  driver->set_state(DrvState::DISCOVERED);
+                  is_busy = false;
+                }
+                else {
+                  driver->remote_bda[0] = 0;
+                  is_present = false;
                 }
               }
               else if(driver->state() == DrvState::ESTABLISHED) {
@@ -209,7 +216,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
                 if (now.is_valid())
                   if(now.timestamp >= driver->sync_data_time) {
                     driver->sync_data_time = now.timestamp + driver->sync_data_period;
-                    driver->sync_data();
+                    driver->sync_data_();
                   }
               }
               break;
@@ -477,7 +484,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
         gatt_err = 1;
         break;
       }
-      this->device_online();
+      this->device_online_();
       break;
     }
     case ESP_GATTC_WRITE_CHAR_EVT: {
@@ -499,10 +506,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
           this->notify_data_time = now.timestamp;
         memcpy(this->notify_data, param->notify.value, param->notify.value_len);
         this->notify_data_len = param->notify.value_len;
-        this->parse_response(this->notify_data, this->notify_data_len, this->notify_data_time);
-//        ESP_LOGI(TAG, "%s notify value: %s", this->mnf_model.c_str(),
-//              format_hex_pretty(param->notify.value, param->notify.value_len).c_str());
-        
+        this->parse_response_(this->notify_data, this->notify_data_len, this->notify_data_time);
       }
       break;
     }
@@ -512,7 +516,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
     }
     case ESP_GATTC_CLOSE_EVT: {
 //      ESP_LOGD(TAG, "(%d) CLOSE %d", event, this->app_id);
-      this->device_offline();
+      this->device_offline_();
       this->set_state(DrvState::IDLE);
       global_r4s_engine->start_scan();
       break;

@@ -6,9 +6,11 @@
 В конфигурационный файл **yaml** добавить следующие строки:
 ```yml
 external_components:
-  - source: github://KomX/esphome/components
+  - source: github://KomX/ESPHome-Ready4Sky/components
+
 time:
   platform: homeassistant 
+
 ready4sky:
   scan_parameters:
     monitor: false
@@ -17,7 +19,7 @@ ready4sky:
     duration: 30 s
     active: true
 ```
-##### Пояснения к коду
+##### Пояснение к коду
 >**scan_parameters** *(Optional)* Заголовок блока параметров. Отсутствие заголовка выставит параметры по умолчанию.
 >>**monitor** *(Optional, default=false)* Параметр. В активном состоянии производится поиск устройств.  
 >>**interval** *(Optional, default=150ms)* Параметр. Задаёт интервал сканирования.  
