@@ -217,10 +217,11 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         if((data[1] == this->cmd_count) && !data[3])
           this->send_(0x06);
       }
-      else if(this->kettle_state.type & 0x07) {
+      if(this->kettle_state.type & 0x07) {
         if((data[1] == this->cmd_count) && data[3])
           this->send_(0x06);
       }
+      this->send_(0x06);
       break;
     }
     case 0x06: {
