@@ -377,13 +377,17 @@ void SkyKettle::send_(uint8_t command) {
       break;
     }
     case 0x05:{
-      if(this->kettle_state.type & 0x78)   // RK-G2xxS, RK-M13xS, RK-M21xS, RK-M223S
+      if(this->kettle_state.type & 0x78)      // RK-G2xxS, RK-M13xS, RK-M21xS, RK-M223S
         this->send_data_len = 20;
-      else
-        this->send_data_len = 7;           // RK-M171S, RK-M172S, RK-M173S, RK-G200
-      if(this->kettle_state.type & 0x01) { // RK-M171S, RK-M172S
-        this->send_data[4] = this->send_data[5];
-        this->send_data[5] = 0x00;
+      else {
+        this->send_data_len = 7;              // RK-M171S, RK-M172S, RK-M173S, RK-G200
+        if(this->kettle_state.type & 0x03) {  // RK-M171S, RK-M172S, RK-M173S
+          (this->send_data[3] == 0x02) ? 0x00 : this->send_data[3];
+        }
+        if(this->kettle_state.type & 0x01) {  // RK-M171S, RK-M172S
+          this->send_data[4] = this->send_data[5];
+          this->send_data[5] = 0x00;
+        }
       }
       break;
     }
@@ -420,10 +424,22 @@ void SkyKettle::send_(uint8_t command) {
 }
 
 void SkyKettle::send_on() {
-  if(this->is_ready)
-    this->send_(0x03);
-  else
-    this->kettle_state.wait_command = 0x03;
+  if(this->kettle_state.type & 0x03) {
+    for (size_t i = 1; i < 20; i++)
+      this->send_data[i] = 0x00;
+    this->send_data[3] = this->kettle_state.programm;
+    this->send_data[5] = this->kettle_state.target;
+    if(this->is_ready)
+      this->send_(0x05);
+    else
+      this->kettle_state.wait_command = 0x05;
+  }
+  else {
+    if(this->is_ready)
+      this->send_(0x03);
+    else
+      this->kettle_state.wait_command = 0x03;
+  }
 }
 
 void SkyKettle::send_off() {

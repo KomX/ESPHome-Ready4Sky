@@ -4,6 +4,7 @@
 #include "esphome/core/helpers.h"
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/number/number.h"
+#include "esphome/components/light/light_output.h"
 #include "../ready4sky/ready4sky.h"
 
 #ifdef USE_ESP32
@@ -77,6 +78,7 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void set_status_indicator(text_sensor::TextSensor *status_ind) { this->status_ind_ = status_ind; }
     void set_boil_time_adj(number::Number *boil_time_adj) { this->boil_time_adj_ = boil_time_adj; }
     void set_power(switch_::Switch *power) { this->power_ = power; }
+    void set_back_light(light::LightOutput *back_light) { this->back_light_ = back_light; }
     
     void send_on();
     void send_off();
@@ -106,6 +108,8 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     
     number::Number *target_{nullptr};
     number::Number *boil_time_adj_{nullptr};
+    
+    light::LightOutput *back_light_{nullptr};
     
     text_sensor::TextSensor *status_ind_{nullptr};
     
@@ -152,6 +156,21 @@ class SkyKettleBoilTimeAdjNumber : public number::Number {
     SkyKettle *parent_;
 };
 
+class SkyKettleBackgroundLight : public light::LightOutput {
+  public:
+    void set_parent(SkyKettle *parent) { this->parent_ = parent; }
+    light::LightTraits get_traits() override {
+      light::LightTraits traits{};
+      traits.set_supported_color_modes({light::ColorMode::RGB});
+      return traits;
+    }
+    void write_state(light::LightState *state) override {
+      
+    }
+
+  protected:
+    SkyKettle *parent_;
+};
 
 }  // namespace skykettle
 }  // namespace esphome

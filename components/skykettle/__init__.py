@@ -2,13 +2,8 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import(
   ready4sky,
-#  binary_sensor,
-#  climate,
-#  cover,
-#  fan,
-#  light,
+  light,
   number,
-#  select,
   sensor,
   switch,
   text_sensor,
@@ -22,6 +17,7 @@ from esphome.const import (
   CONF_MAC_ADDRESS,
   CONF_MODE,
   CONF_MODEL,
+  CONF_OUTPUT_ID,
   CONF_POWER,
   CONF_SIGNAL_STRENGTH,
   CONF_TEMPERATURE,
@@ -46,15 +42,19 @@ from esphome.const import (
 
 CODEOWNERS = ["@KomX"]
 DEPENDENCIES = ["ready4sky"]
-AUTO_LOAD = ["switch", "sensor", "number", "text_sensor"]
+AUTO_LOAD = ["switch", "sensor", "number", "text_sensor", "light"]
 
 skykettle_ns = cg.esphome_ns.namespace("skykettle")
 SkyKettle = skykettle_ns.class_("SkyKettle", cg.Component, ready4sky.R4SDriver)
 
 SkyKettlePowerSwitch = skykettle_ns.class_("SkyKettlePowerSwitch", switch.Switch)
+#SkyKettleBeepSwitch = skykettle_ns.class_("SkyKettleBeepSwitch", switch.Switch)
+#SkyKettleLockSwitch = skykettle_ns.class_("SkyKettleLockSwitch", switch.Switch)
 
 SkyKettleTargetNumber = skykettle_ns.class_("SkyKettleTargetNumber", number.Number)
 SkyKettleBoilTimeAdjNumber = skykettle_ns.class_("SkyKettleBoilTimeAdjNumber", number.Number)
+
+SkyKettleBackgroundLight = skykettle_ns.class_("SkyKettleBackgroundLight", light.LightOutput)
 
 MODEL_TYPE = {
   "RK-G200":   4,
@@ -84,6 +84,7 @@ MODEL_TYPE = {
 CONF_CUP_CORRECT = "cup_correction"
 CONF_CUP_QUANTITY = "cup_quantity"
 CONF_CUP_VOLUME = "cup_volume"
+CONF_BACK_LIGHT = "background_light"
 CONF_BOIL_TIME_ADJ = "boil_time_adjustment"
 CONF_TARGET_TEMP = "target_temperature"
 CONF_WATER_VOLUME = "water_volume"
@@ -95,7 +96,7 @@ CONF_CONTROL = "controlling"
 ICON_COFFEE =  "mdi:coffee"
 ICON_CUP =  "mdi:cup"
 ICON_KETTLE = "mdi:kettle"
-ICON_TEMP_WATER = "mdi:thermometer-water"
+ICON_TEMP_WATER = "mdi:thermometer-lines"
 ICON_WORK_CYCLES = "mdi:calendar-refresh"
 ICON_WORK_TIME = "mdi:calendar-clock"
 UNIT_HOURS = "h"
@@ -203,6 +204,11 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
               }
             ),
+            cv.Optional(CONF_BACK_LIGHT): light.RGB_LIGHT_SCHEMA.extend(
+              {
+                cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(SkyKettleBackgroundLight),
+              }
+            ),
           }
         ),
       ),
@@ -251,14 +257,19 @@ async def to_code(config):
   
   params = config[CONF_CONTROL]
   conf = params[CONF_POWER]
-  sens = cg.new_Pvariable(conf[CONF_ID], var)
-  await switch.register_switch(sens, conf)
-  cg.add(var.set_power(sens))
+  swtch = cg.new_Pvariable(conf[CONF_ID], var)
+  await switch.register_switch(swtch, conf)
+  cg.add(var.set_power(swtch))
   if CONF_TARGET_TEMP in params:
     numb = await number.new_number(params[CONF_TARGET_TEMP], min_value=35.0, max_value=100.0, step=5.0)
     cg.add(numb.set_parent(var))
     cg.add(var.set_target(numb))
-  
+  if CONF_BACK_LIGHT in params:
+    lght = cg.new_Pvariable(params[CONF_BACK_LIGHT][CONF_OUTPUT_ID])
+    await light.register_light(lght, params[CONF_BACK_LIGHT])
+    cg.add(lght.set_parent(var))
+    cg.add(var.set_back_light(lght))
+    
   if (cv.enum(MODEL_TYPE)(config[CONF_MODEL]) > '7'):
     if CONF_BOIL_TIME_ADJ in params:
       numb = await number.new_number(params[CONF_BOIL_TIME_ADJ], min_value=-5, max_value=5, step=1)
