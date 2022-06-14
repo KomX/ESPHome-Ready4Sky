@@ -214,11 +214,11 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
     }
     case 0x05: {
       if(this->kettle_state.type & 0x78) {
-        if((data[1] == this->cmd_count) && data[3])
+        if((data[1] == this->cmd_count) && !data[3])
           this->send_(0x06);
       }
       else if(this->kettle_state.type & 0x07) {
-        if((data[1] == this->cmd_count) && !data[3])
+        if((data[1] == this->cmd_count) && data[3])
           this->send_(0x06);
       }
       break;
