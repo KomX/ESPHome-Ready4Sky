@@ -214,11 +214,11 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
     }
     case 0x05: {
       if(this->kettle_state.type & 0x78) {
-        if((data[1] == this->cmd_count) && !data[3])
+        if((data[1] == this->cmd_count) && data[3])
           this->send_(0x06);
       }
       else if(this->kettle_state.type & 0x07) {
-        if((data[1] == this->cmd_count) && data[3])
+        if((data[1] == this->cmd_count) && !data[3])
           this->send_(0x06);
       }
       break;
@@ -382,7 +382,8 @@ void SkyKettle::send_(uint8_t command) {
       else {
         this->send_data_len = 7;              // RK-M171S, RK-M172S, RK-M173S, RK-G200
         if(this->kettle_state.type & 0x03) {  // RK-M171S, RK-M172S, RK-M173S
-          (this->send_data[3] == 0x02) ? 0x00 : this->send_data[3];
+          if(this->send_data[3] == 0x02)
+            this->send_data[3] = 0x00;
         }
         if(this->kettle_state.type & 0x01) {  // RK-M171S, RK-M172S
           this->send_data[4] = this->send_data[5];
