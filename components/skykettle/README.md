@@ -22,14 +22,14 @@ skykettle:
         name: ${kettle} Work Cycles
       work_time:
         name: ${kettle} Work Time
-      status_indicator:   ###ВНИМАНИЕ!### Не работает с моделями RK-M17xS и RK-G200.
+      status_indicator:
         name: ${kettle} Status
     controlling:
       power:
         name: ${kettle} Power
       target_temperature:
         name: ${kettle} Target
-      boil_time_adjustment:
+      boil_time_adjustment:   ###ВНИМАНИЕ!### Не работает с моделями RK-M17xS и RK-G200.
         name: ${kettle} Boil Adj
 ```
 #### Пояснения к коду	
