@@ -462,10 +462,12 @@ void SkyKettle::send_target_temp(uint8_t tt) {
       this->send_data[3] = tt ? (this->kettle_state.raw_water ? 0x02 : 0x01) : 0x00;
       this->send_data[5] = tt;
       this->send_data[16] = this->kettle_state.boil_time;
-      if(this->is_ready)
-        this->send_(0x05);
-      else
-        this->kettle_state.wait_command = 0x05;
+      if(this->kettle_state.type & 0x7E) {
+        if(this->is_ready)
+          this->send_(0x05);
+        else
+          this->kettle_state.wait_command = 0x05;
+      }
     }
     else
       this->kettle_state.target = tt;
