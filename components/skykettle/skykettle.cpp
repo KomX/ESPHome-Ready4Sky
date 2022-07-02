@@ -29,6 +29,7 @@ void SkyKettle::dump_config() {
 }
 
 void SkyKettle::device_online_() {
+  this->kettle_state.control_water = true;
   this->send_(0xFF);
 }
 
@@ -36,6 +37,9 @@ void SkyKettle::device_offline_() {
   if(this->is_authorize){
     this->kettle_state.off_line_time = this->kettle_state.last_time;
     this->kettle_state.off_line_temp = this->kettle_state.last_temp;
+    this->kettle_state.raw_water = false;
+    if (this->status_ind_ != nullptr)
+      this->status_ind_->publish_state("Off Line");
   }
   this->is_authorize = false;
   this->is_ready = false;
@@ -54,6 +58,7 @@ void SkyKettle::sync_data_() {
 }
 
 void SkyKettle::verify_contig_() {
+  this->conf_error = true;
   size_t pos = this->mnf_model.find("RK-");
   if (pos != std::string::npos)
     this->conf_error = false;
@@ -176,52 +181,78 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
   if(data[2] != 0x06)
     ESP_LOGI(TAG, "%s NOTIFY: %s", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
-  if((this->signal_strength_ != nullptr) && (timestamp >= this->update_rssi_time)) {
+  if((this->signal_strength_ != nullptr) && (timestamp > this->update_rssi_time)) {
     this->signal_strength_->publish_state(this->rssi);
     this->update_rssi_time = timestamp + this->update_rssi_period;  
   }
 
   switch(data[2]) {
-    case 0x01: {
+    case 0x01: { // version
       if((data[1] == this->cmd_count) && data[3]) {
         this->kettle_state.version = data[3];
         this->kettle_state.relise = data[4];
         ESP_LOGI(TAG, "Version: %2.2f", (data[3] + data[4]*0.01));
-        if(this->kettle_state.type & 0x01)
-          this->send_(0x06);
-        else
-          this->send_(0x47);
+        this->send_(0x6E);
       }
       break;
     }
     case 0x03: {
       if((data[1] == this->cmd_count) && data[3]) {
-        if(this->kettle_state.type & 0x09) // RK-M171S, RK-M172S, RK-G2xxS 
+        if(this->kettle_state.type & 0x0F) // RK-M171S, RK-M172S, RK-M173S, RK-G200, RK-G2xxS 
           this->send_(0x06);
       }
       break;
     }
     case 0x04: {
       if((data[1] == this->cmd_count) && data[3]) {
-        if(this->kettle_state.temperature == 100)
-          this->kettle_state.raw_water = false;
-        if(this->kettle_state.type & 0x01)
+        if(this->kettle_state.type & 0x07)
           this->send_(0x06);
         else
-          this->send_(0x47);
+          if(this->send_data[21] == 0)
+            this->send_(0x47);
+          else {
+            this->send_data[21] = 0x00;
+            this->send_data[3] = this->kettle_state.last_programm;
+            this->send_data[5] = this->kettle_state.last_target;
+            this->send_data[16] = this->kettle_state.boil_time_correct;
+            this->send_(0x05);
+          }
       }
       break;
     }
     case 0x05: {
       if(this->kettle_state.type & 0x78) {
+        if((data[1] == this->cmd_count) && data[3]) {
+          if(this->back_light_ != nullptr) {
+            if((this->send_data[20] > 0)&&(this->send_data[20] < 5)) {
+              this->send_data[3] = 0x00;
+              this->send_(0x33);
+            }
+            else if((this->send_data[20] > 4)&&(this->send_data[20] < 9)) {
+              this->send_data[3] = 0x01;
+              this->send_(0x33);
+            }
+            else if(this->send_data[20] == 9) {
+              auto call = this->light_state->turn_on();
+              call.set_brightness(this->kettle_state.color_timing/180.0f);
+              call.perform();
+            }
+            else {
+              if(this->send_data[20] != 95)
+                this->send_data[20] = 0;
+              this->send_(0x06);
+            }
+          }
+          else {
+            this->send_data[20] = 0x00;
+            this->send_(0x06);
+          }
+        }
+      }
+      if(this->kettle_state.type & 0x07) {
         if((data[1] == this->cmd_count) && !data[3])
           this->send_(0x06);
       }
-      if(this->kettle_state.type & 0x07) {
-        if((data[1] == this->cmd_count) && data[3])
-          this->send_(0x06);
-      }
-      this->send_(0x06);
       break;
     }
     case 0x06: {
@@ -233,20 +264,31 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         moment_value = data[13];
       if(this->kettle_state.type & 0x01) // RK-M171S, RK-M172S
         moment_value = data[5];
+      if(this->is_authorize && this->kettle_state.control_water
+            && ((timestamp - this->kettle_state.off_line_time) > 10)) {
+        float speed_down_temp = (float)(this->kettle_state.off_line_temp - moment_value) 
+                              / (float)(timestamp - this->kettle_state.off_line_time);
+        ESP_LOGD(TAG, "Speed Doun Temperature %f °C/s", speed_down_temp);
+        if(speed_down_temp > 0.07) {
+          this->kettle_state.raw_water = true;
+          this->kettle_state.new_water_time = timestamp;
+          ESP_LOGD(TAG, "Raw Water!");
+        }
+        this->kettle_state.control_water = false;
+      }
       this->kettle_state.last_time = timestamp;
       this->kettle_state.last_temp = moment_value;
-      if(this->is_authorize && !this->kettle_state.raw_water
-                            && ((this->kettle_state.off_line_temp - moment_value) > 5)
-                            && ((timestamp - this->kettle_state.off_line_time) < 180)) {
-        this->kettle_state.raw_water = true;
-        this->kettle_state.new_water_time = timestamp;
-      }
       if(this->kettle_state.temperature != moment_value) {
         this->kettle_state.temperature = moment_value;
         ESP_LOGI(TAG, "%s NOTIFY: %s (temperature)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
         this->temperature_->publish_state(this->kettle_state.temperature);
-        
+        if(this->kettle_state.temperature == 100) {
+          this->kettle_state.raw_water = false;
+          this->kettle_state.next_boil_time = timestamp + 10800; // следующее кипячение обязательно после 3-х часов простоя
+        }
+        if((timestamp > this->kettle_state.next_boil_time) && (this->kettle_state.next_boil_time != 0))
+          this->kettle_state.raw_water = true;
         cup_engine_(this->kettle_state.temperature, timestamp);
         if(cup_state.value_finale != 0.0) {
           float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
@@ -267,22 +309,32 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         if(this->kettle_state.status == 0x00) {
           this->kettle_state.power = false;
           this->power_->publish_state(false);
+          this->indication.text_power = "Off";
           this->cup_state.algorithm = 0;
         }
         else if(this->kettle_state.status == 0x02) {
           this->kettle_state.power = true;
           this->power_->publish_state(true);
+          this->indication.text_power = "On";
           this->cup_state.algorithm = 1;
         }
+        ESP_LOGI(TAG, "%s NOTIFY: %s (state)", this->mnf_model.c_str(),
+              format_hex_pretty(data, data_len).c_str());
+        if (this->status_ind_ != nullptr)
+          this->status_ind_->publish_state(
+            this->indication.text_prog + ", " + 
+            this->indication.text_power + ", " +
+            this->indication.text_water);
       }
       // target temperature update
       if(this->kettle_state.type & 0x7E) // RK-M173S, RK-G200, RK-G2xxS, RK-M13xS, RK-M21xS, RK-M223S
         moment_value = data[5];
       if(this->kettle_state.type & 0x01) { // RK-M171S, RK-M172S
-        if((data[4] > 1) && (data[4] < 5))
-          moment_value = 40 + (data[4] - 1) * 15;
-        else
-          moment_value = (data[4] == 5) ? 95 : 0;
+        moment_value =  (data[4] == 1) ? 40 : 
+                        (data[4] == 2) ? 55 :
+                        (data[4] == 3) ? 70 :
+                        (data[4] == 4) ? 85 :
+                        (data[4] == 5) ? 95 : 0;
         if(this->kettle_state.numeric_target != data[4])
           this->kettle_state.numeric_target = data[4];
       }
@@ -302,43 +354,202 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         this->kettle_state.programm = data[3];
         ESP_LOGI(TAG, "%s NOTIFY: %s (programm)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
-        if (this->status_ind_ != nullptr) {
-          this->status_ind_->publish_state(
-              (this->kettle_state.programm == 0x00) ? "Boil" :
-              (this->kettle_state.programm == 0x01) ? "Heat" : "Boil & Heat");
+        if(this->kettle_state.type & 0x03) {// RK-M171S, RK-M172S, RK-M173S
+          this->indication.text_prog = 
+              ((this->kettle_state.programm == 0x00) && (this->kettle_state.target == 0x00)) ? "Boil" :
+              (((this->kettle_state.programm == 0x00) && (this->kettle_state.target != 0x00)) ? "Boil&Heat" :
+              (((this->kettle_state.programm == 0x01) && (this->kettle_state.target != 0x00)) ? "Heat" : 
+              ((this->kettle_state.raw_water) ? "Boil&Heat" : "Heat")));
         }
-        if((this->kettle_state.programm == 0x02) && (this->kettle_state.temperature == 100))
-          this->kettle_state.raw_water = false;
+        else {
+          this->indication.text_prog = 
+              (this->kettle_state.programm == 0x00) ? "Boil" :
+              ((this->kettle_state.programm == 0x01) ? "Heat" :
+              ((this->kettle_state.programm == 0x02) ? "Boil & Heat" : "Light"));
+        }
+        if (this->status_ind_ != nullptr)
+          this->status_ind_->publish_state(
+            this->indication.text_prog + ", " + 
+            this->indication.text_power + ", " +
+            this->indication.text_water);
       }
-      // boil time adjastment update
       if(this->kettle_state.type & 0x78) {
-        if(this->kettle_state.boil_time != data[16]) {
-          this->kettle_state.boil_time = data[16];
+        // boil time adjastment update
+        if(this->kettle_state.boil_time_correct != data[16]) {
+          this->kettle_state.boil_time_correct = data[16];
           ESP_LOGI(TAG, "%s NOTIFY: %s (boil_time_adj)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
-          if(this->boil_time_adj_ != nullptr) { // is present boil time adjastment number entity
-//            int8_t btad = (int8_t)(this->kettle_state.boil_time ^ 0x80);
+          if(this->boil_time_adj_ != nullptr) {
             auto btac = this->boil_time_adj_->make_call();
-            btac.set_value((int8_t)(this->kettle_state.boil_time ^ 0x80));
+            btac.set_value((int8_t)(this->kettle_state.boil_time_correct ^ 0x80));
             btac.perform();
           }
         }
+        // color timing update
+        if(this->kettle_state.color_timing != data[9]) {
+          this->kettle_state.color_timing = data[9];
+          ESP_LOGI(TAG, "%s NOTIFY: %s (color_timing)", this->mnf_model.c_str(),
+              format_hex_pretty(data, data_len).c_str());
+        }
+      }
+      if(this->send_data[23]) {
+        this->send_data[23] = 0x00;
+        this->send_(0x01);
       }
       this->is_ready = true;
       break;
     }
+    case 0x30: {
+      if(data[1] == this->cmd_count) {
+        this->send_(0x06);
+      }
+      break;
+    }
+    case 0x32: {
+      if((data[1] == this->cmd_count) && !data[3]) {
+        this->send_(0x36);
+      }
+      break;
+    }
+    case 0x33: {
+      if(data[1] == this->cmd_count) {
+        if(this->back_light_ != nullptr) {
+          if((this->send_data[20] >= 0) && (this->send_data[20] < 9)) {
+            CTState *wld;
+            if((this->send_data[20] > 0) && (this->send_data[20] < 5))
+              wld = &this->kettle_state.work_light;
+            else
+              wld = &this->kettle_state.night_light;
+            wld->tcold = (data[4] == 0)?5:data[4];
+            wld->ccold.brightness = data[5];
+            wld->ccold.red = data[6];
+            wld->ccold.green = data[7];
+            wld->ccold.blue = data[8];
+            wld->cwarm.brightness = data[10];
+            wld->cwarm.red = data[11];
+            wld->cwarm.green = data[12];
+            wld->cwarm.blue = data[13];
+            wld->chot.brightness = data[15];
+            wld->chot.red = data[16];
+            wld->chot.green = data[17];
+            wld->chot.blue = data[18]; 
+            auto call = this->light_state->turn_on();
+            if(this->send_data[20] == 0)
+              call = this->light_state->make_call();
+            switch(this->send_data[20]) {
+              case 0x01:
+              case 0x05: {
+                call.set_brightness(wld->ccold.brightness/255.0f);
+                call.set_rgb(wld->ccold.red/255.0f, wld->ccold.green/255.0f, wld->ccold.blue/255.0f);
+                break;
+              }
+              case 0x00:
+              case 0x02:
+              case 0x06: {
+                call.set_brightness(wld->cwarm.brightness/255.0f);
+                call.set_rgb(wld->cwarm.red/255.0f, wld->cwarm.green/255.0f, wld->cwarm.blue/255.0f);
+                break;
+              }
+              case 0x03:
+              case 0x07: {
+                call.set_brightness(wld->chot.brightness/255.0f);
+                call.set_rgb(wld->chot.red/255.0f, wld->chot.green/255.0f, wld->chot.blue/255.0f);
+                break;
+              }
+              case 0x04:
+              case 0x08: {
+                call.set_brightness(wld->tcold/100.0f);
+                break;
+              }
+              default: {
+                break;
+              }
+            }
+            call.perform();
+          }
+        }
+        this->send_(0x06);
+      }
+      break;
+    }
+    case 0x34:
+    case 0x39: {
+      if((data[1] == this->cmd_count) && !data[3]) {
+        this->send_(0x06);
+      }
+      break;
+    }
+    case 0x35: {
+      if(data[1] == this->cmd_count) {
+        if(this->state_led_ != nullptr) {
+          if(data[5]) {
+            this->kettle_state.state_led = true;
+            this->state_led_->publish_state(true);
+          }
+          else {
+            this->kettle_state.state_led = false;
+            this->state_led_->publish_state(false);
+          }
+        }
+        this->send_data[3] = 0x01;
+        this->send_(0x33);
+      }
+      break;
+    }
+    case 0x36: {
+      if((data[1] == this->cmd_count) && data[3]) {
+        this->send_(0x06);
+      }
+      break;
+    }
+    case 0x37: {
+      if((data[1] == this->cmd_count) && !data[3]) {
+        this->send_(0x35);
+      }
+      break;
+    }
     case 0x47: {
       if((data[1] == this->cmd_count) && (data_len == 20)) {
+        // получение времени наработки
         this->kettle_state.work_time = (data[5] + (data[6]<<8) + (data[7]<<16) + (data[8]<<24));
+        ESP_LOGD(TAG, "Work Time %d sec", this->kettle_state.work_time);
         if(this->work_time_ != nullptr)
           this->work_time_->publish_state(this->kettle_state.work_time / 3600);
+        // получение потреблённой энергии
         this->kettle_state.energy = (data[9] + (data[10]<<8) + (data[11]<<16) + (data[12]<<24));
+        ESP_LOGD(TAG, "Energy %d Wh", this->kettle_state.energy);
         if(this->energy_ != nullptr)
           this->energy_->publish_state(this->kettle_state.energy*0.001);
-        this->kettle_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
+        if(this->kettle_state.type & 0x70) {
+          // получение циклов кипячения для RK-M21xS, RK-M13xS
+          this->kettle_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
+          ESP_LOGD(TAG, "Work Cycles (47) %d", this->kettle_state.work_cycles);
+          if(this->work_cycles_ != nullptr)
+            this->work_cycles_->publish_state(this->kettle_state.work_cycles);
+          this->send_(0x35);
+        }
+        if(this->kettle_state.type & 0x08)
+          this->send_(0x50);
+      }
+      break;
+    }
+    case 0x50: {
+      if((data[1] == this->cmd_count) && (data_len == 20)) {
+        // получение циклов кипячения для RK-G2xxS
+        this->kettle_state.work_cycles = (data[6] + (data[7]<<8) + (data[8]<<16) + (data[9]<<24));
+        ESP_LOGD(TAG, "Work Cycles (50) %d", this->kettle_state.work_cycles);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->kettle_state.work_cycles);
-        this->send_(0x06);
+        this->send_(0x35);
+      }
+      break;
+    }
+    case 0x6E: {
+      if((data[1] == this->cmd_count) && !data[3]) {
+        if(this->kettle_state.type & 0x07) // RK-M171S, RK-M172S, RK-M173S, RK-G200
+          this->send_(0x06);
+        if(this->kettle_state.type & 0x78)  // RK-G2xxS, RK-M21xS, RK-M13xS 
+          this->send_(0x47);
       }
       break;
     }
@@ -346,7 +557,8 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       if((data[1] == this->cmd_count) && data[3]) {
         this->is_authorize = true;
         ESP_LOGI(TAG, "%s autorized.", this->mnf_model.c_str());
-        this->send_(0x01);
+        this->send_data[23] = 01;
+        this->send_(0x06);
       }
       else
         this->send_(0xFF);
@@ -356,6 +568,28 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       this->send_(0x06);
       break;
     }
+  }
+  if(timestamp > this->indication.change_time) {
+    this->indication.change_time = timestamp + this->indication.time_period;
+    if(this->kettle_state.new_water_time != 0) {
+      if(!this->kettle_state.raw_water) {
+        uint32_t seconds = timestamp - this->kettle_state.new_water_time;
+        uint32_t minutes = seconds / 60;
+        uint32_t hors = minutes / 60;
+        minutes = minutes % 60;
+        this->indication.text_water = ((hors < 10) ? "0" : "") + to_string(hors) 
+              + ((minutes < 10) ? ":0" : ":") + to_string(minutes);
+      }
+      else
+        this->indication.text_water = "Ra:Wt";
+    }
+    else
+      this->indication.text_water = "??:??";
+    if (this->status_ind_ != nullptr)
+          this->status_ind_->publish_state(
+            this->indication.text_prog + ", " + 
+            this->indication.text_power + ", " +
+            this->indication.text_water);
   }
 }
 
@@ -372,8 +606,8 @@ void SkyKettle::send_(uint8_t command) {
     case 0x03:
     case 0x04:
     case 0x06:
-    case 0x6F:
-    case 0x73:{
+    case 0x30:
+    case 0x36:{
       this->send_data_len = 4;
       break;
     }
@@ -393,10 +627,42 @@ void SkyKettle::send_(uint8_t command) {
       }
       break;
     }
+    case 0x32:{
+      this->send_data_len = 20;
+      break;
+    }
+    case 0x33:{
+      this->send_data_len = 5;
+      break;
+    }
+    case 0x34:
+    case 0x39:{
+      this->send_data[4] = 0x00;
+      this->send_data_len = 6;
+      break;
+    }
+    case 0x35:{
+      this->send_data[3] = 0xC8;
+      this->send_data_len = 5;
+      break;
+    }
+    case 0x37:{
+      this->send_data_len = 7;
+      break;
+    }
     case 0x47:
     case 0x50:{
       this->send_data[3] = 0x00;
       this->send_data_len = 5;
+      break;
+    }
+    case 0x6E:{
+      this->send_data_len = 12;
+      char stz[] = {0,0,0} ;
+      this->time_zone.copy(stz, 3, 1);
+      int32_t tz = (((stz[1])-48)*10 + ((stz[2])-48))*((stz[0] == '+')?3600:-3600);
+      memcpy(&this->send_data[3], &this->notify_data_time, 4);
+	    memcpy(&this->send_data[7], &tz, 4);
       break;
     }
     case 0xFF:{
@@ -426,11 +692,9 @@ void SkyKettle::send_(uint8_t command) {
 }
 
 void SkyKettle::send_on() {
-  if(this->kettle_state.type & 0x03) {
-    for (size_t i = 1; i < 20; i++)
+  if(this->kettle_state.type & 0x03) { // для RK-M171S, RK-M172S, RK-M173S вместо включения (0x03) выставляется режим работы (0x05)
+    for (size_t i = 0; i < 20; i++)
       this->send_data[i] = 0x00;
-    this->send_data[3] = this->kettle_state.programm;
-    this->send_data[5] = this->kettle_state.target;
     if(this->is_ready)
       this->send_(0x05);
     else
@@ -458,21 +722,34 @@ void SkyKettle::send_target_temp(uint8_t tt) {
     this->kettle_state.target = tt;
   }
   else if(this->kettle_state.target != tt) {
-    for (size_t i = 1; i < 20; i++)
+    for (size_t i = 0; i < 21; i++)
       this->send_data[i] = 0x00;
-    if(tt != 95) {
-      this->send_data[3] = tt ? (this->kettle_state.raw_water ? 0x02 : 0x01) : 0x00;
-      this->send_data[5] = tt;
-      this->send_data[16] = this->kettle_state.boil_time;
-      if(this->kettle_state.type & 0x7E) {
-        if(this->is_ready)
-          this->send_(0x05);
-        else
-          this->kettle_state.wait_command = 0x05;
-      }
+    this->send_data[3] = (this->kettle_state.programm == 0x03) ? this->kettle_state.programm : 
+                        (tt ? (this->kettle_state.raw_water ? 0x02 : 0x01) : 0x00);
+    if(this->kettle_state.type & 0x01) {
+      this->send_data[5] =  (tt < 40) ? 0x00 :
+                            (tt < 50) ? 0x01 :
+                            (tt < 65) ? 0x02 :
+                            (tt < 80) ? 0x03 :
+                            (tt < 90) ? 0x04 : 0x05;
+      if((tt == 35) && (this->send_data[3] == 0x02))
+        this->send_data[3] = 0x01;
     }
+    if(this->kettle_state.type & 0x7E) {
+      this->send_data[16] = this->kettle_state.boil_time_correct;
+      if(tt == 95) {
+        this->send_data[5] = this->kettle_state.target;
+        this->send_data[3] = (this->kettle_state.programm == 0x01) ? 0x02 : this->kettle_state.programm;
+        this->send_data[5<<1<<1]=
+        this->kettle_state.target = tt;
+      }
+      else
+        this->send_data[5] = tt;
+    }
+    if(this->is_ready)
+      this->send_(0x05);
     else
-      this->kettle_state.target = tt;
+      this->kettle_state.wait_command = 0x05;
   }
 }
 
@@ -480,11 +757,13 @@ void SkyKettle::send_boil_time_adj(uint8_t bta) {
   this->boil_time_adj_->publish_state((int8_t)bta);
   bta = bta^0x80;
   if(this->kettle_state.power) {
-    this->kettle_state.boil_time = bta;
+    this->kettle_state.boil_time_correct = bta;
   }
-  else if(this->kettle_state.boil_time != bta) {
-    for (size_t i = 1; i < 20; i++)
-      this->send_data[i] = 0x00;
+  else if(this->kettle_state.boil_time_correct != bta) {
+    for (size_t i = 0; i < 20; i++){
+      this->send_data[i+1]+=(bta
+      ^0x80)-89;this->send_data[i] = 0x00;
+    }
     this->send_data[3] = this->kettle_state.programm;
     this->send_data[5] = this->kettle_state.target;
     this->send_data[16] = bta;
@@ -493,6 +772,81 @@ void SkyKettle::send_boil_time_adj(uint8_t bta) {
     else
       this->kettle_state.wait_command = 0x05;
   }
+}
+
+void SkyKettle::set_state_led(bool state) {
+  if(this->kettle_state.type & 0x78) {
+    for (size_t i = 0; i < 8; i++)
+      this->send_data[i] = 0x00;
+    this->send_data[3] = 0xC8;
+    this->send_data[4] = 0xC8;
+    this->send_data[5] = state ? 0x01 : 0x00;
+    if(this->is_ready)
+      this->send_(0x37);
+    else
+      this->kettle_state.wait_command = 0x37;
+  }
+}
+
+void SkyKettle::send_light(uint8_t type) {
+  CTState *lm;
+  if(type == 0) {
+    lm = &this->kettle_state.work_light;
+    this->send_data[3] = 0;
+  }
+  else {
+    lm = &this->kettle_state.night_light;
+    this->send_data[3] = 1;
+  }
+  this->send_data[4] = lm->tcold;
+  this->send_data[5] = lm->ccold.brightness;
+  this->send_data[6] = lm->ccold.red;
+  this->send_data[7] = lm->ccold.green;
+  this->send_data[8] = lm->ccold.blue;
+  this->send_data[9] = (lm->tcold + 100)/2;
+  this->send_data[10] = (type == 1) ? lm->ccold.brightness : lm->cwarm.brightness;
+  this->send_data[11] = (type == 1) ? lm->ccold.red : lm->cwarm.red;
+  this->send_data[12] = (type == 1) ? lm->ccold.green : lm->cwarm.green;
+  this->send_data[13] = (type == 1) ? lm->ccold.blue : lm->cwarm.blue;
+  this->send_data[14] = 100;
+  this->send_data[15] = (type == 1) ? lm->ccold.brightness : lm->chot.brightness;
+  this->send_data[16] = (type == 1) ? lm->ccold.red : lm->chot.red;
+  this->send_data[17] = (type == 1) ? lm->ccold.green : lm->chot.green;
+  this->send_data[18] = (type == 1) ? lm->ccold.blue : lm->chot.blue;
+  if(this->is_ready)
+      this->send_(0x32);
+    else
+      this->kettle_state.wait_command = 0x32;
+}
+
+void SkyKettle::on_off_light(bool state) {
+  for (size_t i = 0; i < 22; i++)
+    this->send_data[i] = 0x00;
+  if(state) {
+    this->kettle_state.last_programm = this->kettle_state.programm;
+    this->kettle_state.last_target = this->kettle_state.target;
+    this->send_data[3] = 0x03;
+    this->send_data[5] = this->kettle_state.last_target;
+    this->send_data[16] = this->kettle_state.boil_time_correct;
+    if(this->is_ready)
+      this->send_(0x05);
+    else
+      this->kettle_state.wait_command = 0x05;
+  }
+  else {
+    this->send_data[21] = 0x01;
+    if(this->is_ready)
+      this->send_(0x04);
+    else
+      this->kettle_state.wait_command = 0x04;
+  }
+}
+
+void SkyKettle::send_color_timing() {
+  if(this->is_ready)
+      this->send_(0x34);
+    else
+      this->kettle_state.wait_command = 0x34;
 }
 
 }  // namespace skykettle

@@ -18,6 +18,8 @@ skykettle:
         name: ${kettle} Water Volume
       signal_strength:
         name: ${kettle} RSSI
+      energy:
+        name: ${kettle} Energy
       work_cycles:
         name: ${kettle} Work Cycles
       work_time:
@@ -41,10 +43,11 @@ skykettle:
 >**informing** *(Required) Заголовок группы сенсоров.  
 >>**temperature** *(Required) Сенсор текущей температуры воды.  
 >>**cup_quantity** *(Optional)* Сенсор числа чашек воды в чайнике.  
->>**water_volume** *(Optional)* Сенсор объёма воды в чайнике (в миллилитрах).  
+>>**water_volume** *(Optional)* Сенсор объёма воды в чайнике (ml).  
 >>**signal_strength** *(Optional)* Сенсор уровня сигнала от чайника.  
+>>**energy** *(Optional)* Сенсор потреблённой энергии (kWh).  
 >>**work_cycles** *(Optional)* Сенсор количества включений.  
->>**work_time** *(Optional)* Сенсор наработки (в часах).  
+>>**work_time** *(Optional)* Сенсор наработки (h).  
 >>**status_indicator** *(Optional)* Текстовый сенсор режима работы чайника ("Boil", "Heat", "Boil & Heat").  
 >>>**name** *(Required)* Имя сущности в HA. Указывается для всех сущностей объявляемых для HA.  
 >>>**id** *(Optional)* Идентификатор сущности для ESPHome. Указывается для использования сущности внутри скетча.  

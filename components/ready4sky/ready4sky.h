@@ -84,7 +84,8 @@ class R4SDriver {
     int32_t sync_data_time = 0;
     int8_t  sync_data_period = 1;
     int32_t update_rssi_time = 0;
-    int8_t  update_rssi_period = 1;
+    int8_t  update_rssi_period = 60;
+    std::string time_zone = "";
 
   protected:
     DrvState state_;

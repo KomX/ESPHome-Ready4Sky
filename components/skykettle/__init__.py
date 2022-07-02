@@ -10,8 +10,10 @@ from esphome.components import(
 )
 from esphome.const import (
   CONF_ACCURACY_DECIMALS,
+  CONF_DEFAULT_TRANSITION_LENGTH,
   CONF_ENERGY,
   CONF_ENTITY_CATEGORY,
+  CONF_GAMMA_CORRECT,
   CONF_ICON,
   CONF_ID,
   CONF_MAC_ADDRESS,
@@ -48,8 +50,9 @@ skykettle_ns = cg.esphome_ns.namespace("skykettle")
 SkyKettle = skykettle_ns.class_("SkyKettle", cg.Component, ready4sky.R4SDriver)
 
 SkyKettlePowerSwitch = skykettle_ns.class_("SkyKettlePowerSwitch", switch.Switch)
+SkyKettleBackgroundSwitch = skykettle_ns.class_("SkyKettleBackgroundSwitch", switch.Switch)
+SkyKettleLockSwitch = skykettle_ns.class_("SkyKettleLockSwitch", switch.Switch)
 #SkyKettleBeepSwitch = skykettle_ns.class_("SkyKettleBeepSwitch", switch.Switch)
-#SkyKettleLockSwitch = skykettle_ns.class_("SkyKettleLockSwitch", switch.Switch)
 
 SkyKettleTargetNumber = skykettle_ns.class_("SkyKettleTargetNumber", number.Number)
 SkyKettleBoilTimeAdjNumber = skykettle_ns.class_("SkyKettleBoilTimeAdjNumber", number.Number)
@@ -91,6 +94,7 @@ CONF_WATER_VOLUME = "water_volume"
 CONF_WORK_CYCLES = "work_cycles"
 CONF_WORK_TIME = "work_time"
 CONF_STATUS_INDICATOR = "status_indicator"
+CONF_STATE_LED = "state_led"
 CONF_INFORM = "informing"
 CONF_CONTROL = "controlling"
 ICON_COFFEE =  "mdi:coffee"
@@ -184,10 +188,16 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ICON, default=ICON_KETTLE): switch.icon,
               }
             ),
+            cv.Optional(CONF_STATE_LED): switch.SWITCH_SCHEMA.extend(
+              {
+                cv.GenerateID(): cv.declare_id(SkyKettleBackgroundSwitch),
+                cv.Optional(CONF_ICON, default="mdi:led-variant-on"): switch.icon,
+              }
+            ),
             cv.Optional(CONF_TARGET_TEMP): number.NUMBER_SCHEMA.extend(
               {
                 cv.GenerateID(): cv.declare_id(SkyKettleTargetNumber),
-                cv.Optional(CONF_ICON, default="mdi:water-thermometer"): cv.icon,
+                cv.Optional(CONF_ICON, default="mdi:thermometer-lines"): cv.icon,
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='0'): cv.int_range(min=0, max=2),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_CELSIUS): cv.string_strict,
                 cv.Optional(CONF_MODE, default="SLIDER"): cv.enum(number.NUMBER_MODES, upper=True),
@@ -207,6 +217,8 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_BACK_LIGHT): light.RGB_LIGHT_SCHEMA.extend(
               {
                 cv.GenerateID(CONF_OUTPUT_ID): cv.declare_id(SkyKettleBackgroundLight),
+                cv.Optional(CONF_GAMMA_CORRECT, default=1.0): cv.positive_float,
+                cv.Optional(CONF_DEFAULT_TRANSITION_LENGTH, default="0s"): cv.positive_time_period_milliseconds,
               }
             ),
           }
@@ -260,6 +272,11 @@ async def to_code(config):
   swtch = cg.new_Pvariable(conf[CONF_ID], var)
   await switch.register_switch(swtch, conf)
   cg.add(var.set_power(swtch))
+  if CONF_STATE_LED in params:
+    conf = params[CONF_STATE_LED]
+    swtch = cg.new_Pvariable(conf[CONF_ID], var)
+    await switch.register_switch(swtch, conf)
+    cg.add(var.set_state_led(swtch))
   if CONF_TARGET_TEMP in params:
     numb = await number.new_number(params[CONF_TARGET_TEMP], min_value=35.0, max_value=100.0, step=5.0)
     cg.add(numb.set_parent(var))

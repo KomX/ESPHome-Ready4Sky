@@ -291,9 +291,10 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             global_r4s_engine->new_scan_dev_.empty();
         }
         global_r4s_engine->start_scan();
+        break;
       }
       break;
-	}
+    }
     default:{
       ESP_LOGD("GAP", "GAP Event = 0x%x", event);
       break;
@@ -502,8 +503,13 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
 //      ESP_LOGD(TAG, "(%d) NOTIFY %d", event, this->app_id);
       if ((param->notify.is_notify) && (param->notify.handle == this->rx_char_handle)) {
         auto now = global_r4s_engine->get_time()->now();
-        if (now.is_valid())
+        if (now.is_valid()) {
           this->notify_data_time = now.timestamp;
+          if(this->time_zone == "") {
+            this->time_zone = global_r4s_engine->get_time()->get_timezone();
+            ESP_LOGD(TAG, "set tz");
+          }
+        }
         memcpy(this->notify_data, param->notify.value, param->notify.value_len);
         this->notify_data_len = param->notify.value_len;
         this->parse_response_(this->notify_data, this->notify_data_len, this->notify_data_time);

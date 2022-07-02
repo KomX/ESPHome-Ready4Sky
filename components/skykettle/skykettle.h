@@ -5,6 +5,7 @@
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/number/number.h"
 #include "esphome/components/light/light_output.h"
+#include "esphome/components/light/light_state.h"
 #include "../ready4sky/ready4sky.h"
 
 #ifdef USE_ESP32
@@ -20,44 +21,79 @@ namespace skykettle {
 
 namespace r4s = esphome::ready4sky;
 
+struct CState {
+  uint8_t     red = 255;
+  uint8_t     green = 255;
+  uint8_t     blue = 255;
+  uint8_t     brightness = 255;
+};
+
+struct CTState {
+  uint8_t     tcold = 0;
+  CState      ccold;
+  CState      cwarm;
+  CState      chot;
+};
+
+
 struct KettleState {
   uint8_t     type = 0;
-  uint8_t     status;
+  uint8_t     status = -1;
   uint8_t     temperature;
   uint8_t     target = -1;
   uint8_t     numeric_target = -1;
   uint8_t     programm = -1;
-  uint8_t     boil_time = 0;
+  uint8_t     boil_time_correct = 0;
   uint8_t     version;
   uint8_t     relise;
+  uint8_t     color_timing;
   uint8_t     wait_command = 0;
   uint32_t    energy;
   uint32_t    work_cycles;
   uint32_t    work_time;
   float       cup_quantity;
   uint16_t    water_volume;
-  bool        power;
+  bool        power = false;
+  bool        state_led = false;
   bool        lock;
-  bool        raw_water = false;
-  uint32_t    new_water_time = 0;
-  uint8_t     last_temp = 0;
-  uint32_t    last_time = 0;
-  uint8_t     off_line_temp = 0;
-  uint32_t    off_line_time = 0;
+  
+  bool        control_water = false;
+  bool        raw_water = false;    // флаг сырой или пребывавшей более 6 часов без кипячения воды
+  bool        old_water = false;    // флаг затхлой воды
+  uint32_t    new_water_time = 0;   // время последнего обновления воды
+  uint32_t    next_boil_time = 0;   // время, после которого необходимо кипятить воду
+  uint8_t     last_temp = 0;        // последнее показание температуры с датчика
+  uint32_t    last_time = 0;        // время последнего показания
+  uint8_t     last_programm = 0;
+  uint8_t     last_target = 0;
+  uint8_t     off_line_temp = 0;    // температура при снятии с базы
+  uint32_t    off_line_time = 0;    // время снятия с база
+  CTState     work_light;
+  CTState     night_light;
 };
 
 struct CupEngineState {
-  uint8_t     algorithm = 0;
-  uint8_t     phase = 0;
-  uint8_t     temp_start_1 = 0;
-  uint8_t     temp_stop_1 = 0;
-  uint8_t     temp_stop_2 = 0;
-  uint32_t    time_start_1 = 0;
-  uint16_t    cup_volume = 0;
-  float       cup_correct = 0.0;
-  float       value_temp = 0.0;
-  float       value_finale = 0.0;
+  uint8_t   algorithm = 0;
+  uint8_t   phase = 0;
+  uint8_t   temp_start_1 = 0;
+  uint8_t   temp_stop_1 = 0;
+  uint8_t   temp_stop_2 = 0;
+  uint32_t  time_start_1 = 0;
+  uint16_t  cup_volume = 0;
+  float     cup_correct = 0.0;
+  float     value_temp = 0.0;
+  float     value_finale = 0.0;
 };
+
+struct IndicationState {
+  uint8_t     time_period = 30;
+  uint32_t    change_time = 0;
+  std::string text_power    = "Off";    // power or lock status
+  std::string text_prog     = "Boil";   // programm status
+  std::string text_water    = "??:??";  // fresh water timing
+};
+
+
 
 class SkyKettle : public r4s::R4SDriver, public Component {
   public:
@@ -78,17 +114,25 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void set_status_indicator(text_sensor::TextSensor *status_ind) { this->status_ind_ = status_ind; }
     void set_boil_time_adj(number::Number *boil_time_adj) { this->boil_time_adj_ = boil_time_adj; }
     void set_power(switch_::Switch *power) { this->power_ = power; }
+    void set_state_led(switch_::Switch *state_led) { this->state_led_ = state_led; }
     void set_back_light(light::LightOutput *back_light) { this->back_light_ = back_light; }
     
     void send_on();
     void send_off();
+    void set_state_led(bool state);
     void send_target_temp(uint8_t tt);
     void send_boil_time_adj(uint8_t bta);
+    void send_light(uint8_t type);
+    void on_off_light(bool state);
+    void send_color_timing();
     
-    bool is_ready = false;
-    KettleState kettle_state;
-    CupEngineState cup_state;         // параметры механизма расчета чашек воды
-
+    bool            is_ready = false;
+    KettleState     kettle_state;
+    CupEngineState  cup_state;  // параметры механизма расчета чашек воды
+    IndicationState indication;
+    
+    light::LightState *light_state{nullptr};
+    
   protected:
     void send_(uint8_t command);
     void parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp) override;
@@ -114,6 +158,7 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     text_sensor::TextSensor *status_ind_{nullptr};
     
     switch_::Switch *power_ = {nullptr};
+    switch_::Switch *state_led_ = {nullptr};
     switch_::Switch *lock_ = {nullptr};
 
 };
@@ -134,12 +179,24 @@ class SkyKettlePowerSwitch : public switch_::Switch {
     SkyKettle *parent_;
 };
 
+class SkyKettleBackgroundSwitch : public switch_::Switch {
+  public:
+    explicit SkyKettleBackgroundSwitch(SkyKettle *parent): parent_(parent) {}
+    void write_state(bool state) override {
+      if(state != this->parent_->kettle_state.state_led) {
+        this->parent_->set_state_led(state);
+      }
+    }
+
+  protected:
+    SkyKettle *parent_;
+};
+
 class SkyKettleTargetNumber : public number::Number {
   public:
     void set_parent(SkyKettle *parent) { this->parent_ = parent; }
     void control(float value) override {
       this->parent_->send_target_temp((uint8_t)value);
-//      this->publish_state(value);
     }
   protected:
     SkyKettle *parent_;
@@ -150,7 +207,6 @@ class SkyKettleBoilTimeAdjNumber : public number::Number {
     void set_parent(SkyKettle *parent) { this->parent_ = parent; }
     void control(float value) override {
       this->parent_->send_boil_time_adj((uint8_t)value);
-//      this->publish_state(value);
     }
   protected:
     SkyKettle *parent_;
@@ -159,17 +215,127 @@ class SkyKettleBoilTimeAdjNumber : public number::Number {
 class SkyKettleBackgroundLight : public light::LightOutput {
   public:
     void set_parent(SkyKettle *parent) { this->parent_ = parent; }
+    
     light::LightTraits get_traits() override {
       light::LightTraits traits{};
       traits.set_supported_color_modes({light::ColorMode::RGB});
       return traits;
     }
+    
+    void setup_state(light::LightState *state) override { this->parent_->light_state = state; }
+    
+    void update_state(light::LightState *state) override {
+      ESP_LOGI("CLR", "Update:");
+    }
+    
     void write_state(light::LightState *state) override {
-      
+      if(this->parent_->send_data[20] == 95)
+        this->parent_->send_data[20] = 0;
+      if(state->remote_values.is_on()) {
+        ESP_LOGI("CLR", "Write State: ON");
+        CTState *wld;
+        if(this->parent_->send_data[20] == 0) {
+          if(this->parent_->kettle_state.programm != 0x03)
+            this->parent_->on_off_light(true);
+          else {
+            wld = &this->parent_->kettle_state.night_light;
+            wld->ccold.red =
+            wld->cwarm.red =
+            wld->chot.red = (uint8_t)(state->current_values.get_red()*255);
+            wld->ccold.green =
+            wld->cwarm.green =
+            wld->chot.green = (uint8_t)(state->current_values.get_green()*255);
+            wld->ccold.blue =
+            wld->cwarm.blue =
+            wld->chot.blue = (uint8_t)(state->current_values.get_blue()*255);
+            wld->ccold.brightness =
+            wld->cwarm.brightness =
+            wld->chot.brightness = (uint8_t)(state->current_values.get_brightness()*255);
+            this->parent_->send_light(1);
+          }
+        }
+        else if((this->parent_->send_data[20] > 0) && (this->parent_->send_data[20] < 9)) {
+          if((this->parent_->send_data[20] > 0) && (this->parent_->send_data[20] < 5))
+            wld = &this->parent_->kettle_state.work_light;
+          else
+            wld = &this->parent_->kettle_state.night_light;
+          switch(this->parent_->send_data[20]) {
+            case 0x01:
+            case 0x05: {
+              wld->ccold.red = (uint8_t)(state->current_values.get_red()*255);
+              wld->ccold.green = (uint8_t)(state->current_values.get_green()*255);
+              wld->ccold.blue = (uint8_t)(state->current_values.get_blue()*255);
+              wld->ccold.brightness = (uint8_t)(state->current_values.get_brightness()*255);
+              break;
+            }
+            case 0x02:
+            case 0x06: {
+              wld->cwarm.red = (uint8_t)(state->current_values.get_red()*255);
+              wld->cwarm.green = (uint8_t)(state->current_values.get_green()*255);
+              wld->cwarm.blue = (uint8_t)(state->current_values.get_blue()*255);
+              wld->cwarm.brightness = (uint8_t)(state->current_values.get_brightness()*255);
+              break;
+            }
+            case 0x03:
+            case 0x07: {
+              wld->chot.red = (uint8_t)(state->current_values.get_red()*255);
+              wld->chot.green = (uint8_t)(state->current_values.get_green()*255);
+              wld->chot.blue = (uint8_t)(state->current_values.get_blue()*255);
+              wld->chot.brightness = (uint8_t)(state->current_values.get_brightness()*255);
+              break;
+            }
+            case 0x04:
+            case 0x08: {
+              wld->tcold = (uint8_t)(state->current_values.get_brightness()*100);
+              break;
+            }
+          }
+        }
+        else if(this->parent_->send_data[20] == 9) {
+        
+        }
+        else if(this->parent_->send_data[20] == 10) {
+        
+        }
+        else if(this->parent_->send_data[20] == 11) {
+        
+        }
+      }
+      else {
+        ESP_LOGI("CLR", "Write State: OFF");
+        if(this->parent_->send_data[20] == 0)
+          this->parent_->on_off_light(false);
+        else {
+          if((this->parent_->send_data[20] > 0) && (this->parent_->send_data[20] < 5)) {
+            this->parent_->send_data[20] = 0;
+            this->parent_->send_light(0);
+          }
+          else if(this->parent_->send_data[20] == 5) {
+            this->parent_->send_data[20] = 0;
+            this->parent_->send_light(1);
+          }
+          else if((this->parent_->send_data[20] > 5) && (this->parent_->send_data[20] < 9)) {
+            this->parent_->send_data[20] = 0;
+            this->parent_->send_light(2);
+          }
+          else if(this->parent_->send_data[20] == 9) {
+            this->parent_->send_data[20] = 0;
+            uint8_t ctg = ((uint8_t)(state->current_values.get_brightness() * 6)) + 1;
+            this->parent_->send_data[3] = 30 * ((ctg < 7) ? ctg : (ctg-1));
+            this->parent_->send_color_timing();
+          }
+          else if(this->parent_->send_data[20] == 10) {
+          
+          }
+          else if(this->parent_->send_data[20] == 11) {
+          
+          }
+        }    
+      }
     }
 
   protected:
-    SkyKettle *parent_;
+    SkyKettle         *parent_{nullptr};
 };
 
 }  // namespace skykettle
