@@ -8,16 +8,31 @@
 external_components:
   - source: github://KomX/ESPHome-Ready4Sky/components
 
+substitutions:
+  gate_id: Gate
+
 time:
   platform: homeassistant 
 
 ready4sky:
   scan_parameters:
+    id: my_ble_gate
     monitor: false
     interval: 150 ms 
     window: 50 ms
     duration: 30 s
     active: true
+
+button:
+  - platform: restart ### сброс модуля
+    name: ${gate_id} Restart
+  - platform: template ### включение или выключение режима поиска новых устройст
+    name: ${gate_id} Scan New Devices
+    icon: mdi:magnify
+    entity_category: config
+    on_press:
+      - lambda: |-
+          id(my_ble_gate).set_monitor(!id(my_ble_gate).get_monitor());
 ```
 ##### Пояснение к коду
 >**scan_parameters** *(Optional)* Заголовок блока параметров. Отсутствие заголовка выставит параметры по умолчанию.
