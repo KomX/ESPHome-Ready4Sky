@@ -15,8 +15,8 @@ time:
   platform: homeassistant 
 
 ready4sky:
+  id: my_ble_gate
   scan_parameters:
-    id: my_ble_gate
     monitor: false
     interval: 150 ms 
     window: 50 ms
