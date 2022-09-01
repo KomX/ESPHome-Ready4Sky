@@ -153,7 +153,7 @@ void R4SEngine::start_scan() {
   this->scan_dev_count = 0;
   esp_ble_gap_set_scan_params(&this->scan_params_);
 //  ESP_LOGD(TAG, "Start scan...");
-  this->set_timeout("scan", this->scan_duration_ * 2000, []() {
+  this->set_timeout("scan", this->scan_duration_*2000, []() {
       ESP_LOGW(TAG, "BLE scan never terminated, rebooting to restore BLE stack...");
       App.reboot();
   });
@@ -161,25 +161,34 @@ void R4SEngine::start_scan() {
 
 void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param ) {
   switch(event) {
-    case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "SCAN_PARAM_SET_COMPLETE");
-      if(param->scan_param_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Set scan param failed, error = 0x%X", param->scan_param_cmpl.status);
+    case ESP_GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE_EVT: {
+//      ESP_LOGD(TAG, "GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE");
+      if (param->local_privacy_cmpl.status != ESP_BT_STATUS_SUCCESS) {
+        ESP_LOGE(TAG, "Config local privacy failed, error = %X", param->local_privacy_cmpl.status);
+        break;
+      }
+      esp_ble_gap_set_scan_params(&global_r4s_engine->scan_params_);
       break;
+    }
+    case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+//      ESP_LOGD(TAG, "GAP_BLE_SCAN_PARAM_SET_COMPLETE");
+      if(param->scan_param_cmpl.status != ESP_BT_STATUS_SUCCESS) {
+        ESP_LOGE(TAG, "Set scan param failed, error = %X", param->scan_param_cmpl.status);
+        break;
       }
       esp_ble_gap_start_scanning(global_r4s_engine->scan_duration_);
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "SCAN_START_COMPLETE");
+//      ESP_LOGD(TAG, "GAP_BLE_SCAN_START_COMPLETE");
       if (param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
-        ESP_LOGE(TAG, "Scan start failed, error = 0x%X", param->scan_start_cmpl.status);
+        ESP_LOGE(TAG, "Scan start failed, error = %X", param->scan_start_cmpl.status);
       else
         global_r4s_engine->is_scaned_ = true;
   	  break;
   	}
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-//      ESP_LOGD(TAG, "SCAN_RESULT");
+//      ESP_LOGD(TAG, "GAP_BLE_SCAN_RESULT");
       switch (param->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT: {
           uint64_t rst_address = ble_addr_to_uint64(param->scan_rst.bda);
@@ -242,14 +251,12 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             }
             if(++global_r4s_engine->scan_dev_count > 25) {
               global_r4s_engine->scan_dev_count = 0;
-//              ESP_LOGD(TAG, "count init SCAN_STOP");
               esp_ble_gap_stop_scanning();
             }
           }
           else {
             ++global_r4s_engine->scan_dev_count;
             if(!is_busy) {
-//              ESP_LOGD(TAG, "idle device init SCAN_STOP");
               esp_ble_gap_stop_scanning();
             }
           }
@@ -265,9 +272,9 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "SCAN_STOP");
+//      ESP_LOGD(TAG, "GAP_BLE_SCAN_STOP");
       if(param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Scan stop failed, error = 0x%X", param->scan_stop_cmpl.status);
+        ESP_LOGE(TAG, "Scan stop failed, error = %X", param->scan_stop_cmpl.status);
         break;
       }
       global_r4s_engine->is_scaned_ = false;
@@ -295,8 +302,41 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       }
       break;
     }
+    case ESP_GAP_BLE_AUTH_CMPL_EVT: {
+      if (!param->ble_security.auth_cmpl.success) {
+        ESP_LOGE(TAG, "Fail reason = 0x%X",param->ble_security.auth_cmpl.fail_reason);
+      } 
+      else {
+        uint8_t am = param->ble_security.auth_cmpl.auth_mode;
+        ESP_LOGD(TAG, "Security Auth Mode = (0x%02X) ESP_LE_AUTH_%s", am,
+            (!am)?"NO_BOND":
+            ((am==1)?"BOND":
+            ((am==4)?"REQ_MITM":
+            ((am==5)?"REQ_BOND_MITM":
+            ((am==8)?"REQ_SC_ONLY": 
+            ((am==9)?"REQ_SC_BOND": 
+            ((am==12)?"REQ_SC_MITM":"REQ_SC_MITM_BOND")))))));
+      }
+      break;
+    }
+    case ESP_GAP_BLE_KEY_EVT: {
+      uint8_t kt = param->ble_security.ble_key.key_type;
+      ESP_LOGD(TAG, "Security Key Type = (0x%02X) ESP_LE_KEY_%s%s", kt,
+            ((!kt)?"NONE":((kt & 0x0F)?"P":"L")),
+            ((kt & 0x11)?"ENC":
+            ((kt & 0x22)?"ID":
+            ((kt & 0x44)?"CSRK":"LK"))));
+      break;
+    }
+    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: {
+      ESP_LOGI(TAG, "Update Connection Params: status = %d, min_int = %d, max_int = %d, conn_int = %d, latency = %d, timeout = %d",
+          param->update_conn_params.status, param->update_conn_params.min_int,
+          param->update_conn_params.max_int, param->update_conn_params.conn_int,
+          param->update_conn_params.latency, param->update_conn_params.timeout);
+      break;
+    }
     default:{
-      ESP_LOGD("GAP", "GAP Event = 0x%x", event);
+      ESP_LOGD("GAP", "GAP Event = 0x%02X", event);
       break;
     }
   }
@@ -329,7 +369,6 @@ std::string R4SEngine::address_str(uint64_t addr) const{
   return (std::string)buf;
 }
 
-
 void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if, esp_ble_gattc_cb_param_t *param ) {
   if (event == ESP_GATTC_REG_EVT && this->app_id != param->reg.app_id)
     return;
@@ -339,14 +378,23 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
   switch (event) {
     case ESP_GATTC_REG_EVT: {
 //      ESP_LOGD(TAG, "(%d) REG %d", event, this->app_id);
-      if (param->reg.status == ESP_GATT_OK)
+      if (param->reg.status == ESP_GATT_OK) {
         this->gattc_if = esp_gattc_if;
+        esp_ble_gap_config_local_privacy(true);
+      }
       else
         ESP_LOGE(TAG, "gattc app registration failed id=%d code=%d", param->reg.app_id, param->reg.status);
       break;
     }
     case ESP_GATTC_CONNECT_EVT: {
 //      ESP_LOGD(TAG, "(%d) CONNECT %d", event, this->app_id);
+      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_ONLY;
+//      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+      esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
+      esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+      esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT);
+//      esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
       break;
     }
     case ESP_GATTC_OPEN_EVT: {
@@ -382,9 +430,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
 //      ESP_LOGD(TAG, "(%d) SEARCH_RES %d", event, this->app_id);
       this->service_start_handle = param->search_res.start_handle;
       this->service_end_handle = param->search_res.end_handle;
-//      ESP_LOGI(TAG, "UUID: %s, start handle: 0x%X, end handle: 0x%X.", 
-//            this->uuid_to_string(param->search_res.srvc_id.uuid).c_str(),
-//            param->search_res.start_handle, param->search_res.end_handle);
+      ESP_LOGD(TAG, "UUID: %s, start handle: 0x%X, end handle: 0x%X.", 
+            this->uuid_to_string(param->search_res.srvc_id.uuid).c_str(),
+            param->search_res.start_handle, param->search_res.end_handle);
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT: {
@@ -416,9 +464,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       }
       if (char_elem_result.properties & ESP_GATT_CHAR_PROP_BIT_WRITE) {
         this->tx_char_handle = char_elem_result.char_handle;
-//        ESP_LOGI(TAG, "UUID: %s, TX handle: 0x%X.",
-//              this->uuid_to_string(r4s_tx_char_uuid).c_str(),
-//              this->tx_char_handle);
+        ESP_LOGD(TAG, "UUID: %s, TX handle: 0x%X.",
+              this->uuid_to_string(r4s_tx_char_uuid).c_str(),
+              this->tx_char_handle);
       }
       uint16_t count_rx = count;
       status = esp_ble_gattc_get_char_by_uuid( this->gattc_if, this->conn_id,
@@ -431,9 +479,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       }
       if (char_elem_result.properties & ESP_GATT_CHAR_PROP_BIT_NOTIFY) {
         this->rx_char_handle = char_elem_result.char_handle;
-//        ESP_LOGI(TAG, "UUID: %s, RX handle: 0x%X.",
-//              this->uuid_to_string(r4s_rx_char_uuid).c_str(),
-//              this->rx_char_handle);
+        ESP_LOGD(TAG, "UUID: %s, RX handle: 0x%X.",
+              this->uuid_to_string(r4s_rx_char_uuid).c_str(),
+              this->rx_char_handle);
         esp_ble_gattc_register_for_notify(this->gattc_if, this->remote_bda, this->rx_char_handle);
       }
       break;
@@ -491,12 +539,15 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
     case ESP_GATTC_WRITE_CHAR_EVT: {
 //      ESP_LOGD(TAG, "(%d) WRITE_CHAR", event);
       if (param->write.status != ESP_GATT_OK){
-        ESP_LOGE(TAG, "Write_char error.");
+        ESP_LOGE(TAG, "Write char error = %d", param->write.status);
+        if (param->write.status == 5)
+          esp_ble_remove_bond_device(this->remote_bda);
         gatt_err = 1;
-        break;
       }
-      this->set_state(DrvState::ESTABLISHED);
-      global_r4s_engine->start_scan();
+      else {
+        this->set_state(DrvState::ESTABLISHED);
+        global_r4s_engine->start_scan();
+      }
       break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
@@ -505,9 +556,8 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
         auto now = global_r4s_engine->get_time()->now();
         if (now.is_valid()) {
           this->notify_data_time = now.timestamp;
-          if(this->time_zone == "") {
-            this->time_zone = global_r4s_engine->get_time()->get_timezone();
-            ESP_LOGD(TAG, "set tz");
+          if(this->tz_offset == 0) {
+            this->tz_offset = time::ESPTime::timezone_offset();
           }
         }
         memcpy(this->notify_data, param->notify.value, param->notify.value_len);
@@ -562,7 +612,6 @@ std::string R4SDriver::uuid_to_string(esp_bt_uuid_t ud) {
   }
   return sbuf;
 }
-
 
 }  // namespace ready4sky
 }  // namespace esphome

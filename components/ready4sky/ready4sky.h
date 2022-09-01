@@ -82,10 +82,10 @@ class R4SDriver {
     uint8_t send_data[BLE_BUFF_SIZE];
     int8_t  send_data_len = 0;
     int32_t sync_data_time = 0;
-    int8_t  sync_data_period = 1;
+    int32_t sync_data_period = 1;
     int32_t update_rssi_time = 0;
-    int8_t  update_rssi_period = 60;
-    std::string time_zone = "";
+    int8_t  update_rssi_period = 10;
+    int32_t tz_offset = 0;
 
   protected:
     DrvState state_;
@@ -110,6 +110,7 @@ class R4SEngine : public Component {
     void set_time(time::RealTimeClock *time) { time_ = time; }
     time::RealTimeClock *get_time() const { return time_; }
     void set_monitor(bool scan_monitor) { scan_monitor_ = scan_monitor; }
+    bool get_monitor() const { return scan_monitor_; }
     void register_r4s_driver(R4SDriver *driver) {
       driver->app_id = ++this->app_id_;
       driver->set_engine_parent(this);
