@@ -5,7 +5,7 @@
 В конфигурационный файл **yaml** добавить следующие строки:
 ```yml
 skykettle:
-  - mac_address: F4:AC:78:85:3C:53  
+  - mac_address: XX:XX:XX:XX:XX:XX  
     model: RK-M216S  
     cup_volume: 250
     cup_correction: 1.0
@@ -31,8 +31,14 @@ skykettle:
         name: ${kettle} Power
       target_temperature:
         name: ${kettle} Target
-      boil_time_adjustment:   ###ВНИМАНИЕ!### Не работает с моделями RK-M17xS и RK-G200.
+      boil_time_adjustment:   ###ВНИМАНИЕ!### Все последующие органы управления не работают с моделями RK-M17xS.
         name: ${kettle} Boil Adj
+      state_led:
+        name: ${kettle} State Led
+      background_light:
+        name: ${kettle} Night Light
+      beeper:
+        name: ${kettle} Beeper
 ```
 #### Пояснения к коду	
 >**mac_address** *(Required)* Параметр. MAC адрес чайника.  
@@ -56,6 +62,9 @@ skykettle:
 >>**power** *(Optional)* Переключатель вкл./выкл.   
 >>**target_temperature** *(Optional)* Уставка целевой температуры. Выбор 35...90 с шагом 5 для режимов "Heat" и "Boil & Heat", выбор 100 для режима "Boil".  
 >>**boil_time_adjustment** *(Optional)* Уставка корректировки времени кипения -5...+5, шаг 1.  
+>>**state_led** *(Optional)* Переключатель подсветки состояния чайника.  
+>>**background_light** *(Optional)* Фоновая подсветка (ночник).  
+>>**beeper** *(Optional)* Переключатель звукового сигнала.  
 >>>**name** *(Required)* Имя сущности в HA. Указывается для всех сущностей объявляемых для HA.  
 >>>**id** *(Optional)* Идентификатор сущности для ESPHome. Указывается для использования сущности внутри скетча.  
 
@@ -66,5 +75,5 @@ skykettle:
 ```yml
 [17:56:12][I][SkyKettle:242]: Cup Quantity: 2.723451,  Water Volume: 681
 ```
-- Разделите мерное количество воды на значение *Water Volume* из лога и получите корректирующее значение, которое и укажите в параметре *cup_correction* (не более 6 знаков после запятой).  
+- Разделив мерное количество воды на значение *Water Volume* из лога, получите корректирующее значение, которое и укажите в параметре *cup_correction* (не более 6 знаков после запятой).  
 - После перепрошивки чайник готов к работе. Удачи!  

@@ -39,7 +39,7 @@ struct CTState {
 struct KettleState {
   uint8_t     type = 0;
   uint8_t     status = -1;
-  uint8_t     temperature;
+  uint8_t     temperature = 0;
   uint8_t     target = -1;
   uint8_t     numeric_target = -1;
   uint8_t     programm = -1;
@@ -48,6 +48,8 @@ struct KettleState {
   uint8_t     relise;
   uint8_t     color_timing;
   uint8_t     wait_command = 0;
+  uint8_t     lock = -1;
+  uint8_t     beeper = -1;
   uint32_t    energy;
   uint32_t    work_cycles;
   uint32_t    work_time;
@@ -55,8 +57,8 @@ struct KettleState {
   uint16_t    water_volume;
   bool        power = false;
   bool        state_led = false;
-  bool        lock;
   
+  bool        full_init = false;
   bool        control_water = false;
   bool        raw_water = false;    // флаг сырой или пребывавшей более 6 часов без кипячения воды
   bool        old_water = false;    // флаг затхлой воды
@@ -115,11 +117,13 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void set_boil_time_adj(number::Number *boil_time_adj) { this->boil_time_adj_ = boil_time_adj; }
     void set_power(switch_::Switch *power) { this->power_ = power; }
     void set_state_led(switch_::Switch *state_led) { this->state_led_ = state_led; }
+    void set_beeper(switch_::Switch *beeper) { this->beeper_ = beeper; }
     void set_back_light(light::LightOutput *back_light) { this->back_light_ = back_light; }
     
     void send_on();
     void send_off();
-    void set_state_led(bool state);
+    void send_state_led(bool state);
+    void send_beeper(bool state);
     void send_target_temp(uint8_t tt);
     void send_boil_time_adj(uint8_t bta);
     void send_light(uint8_t type);
@@ -159,7 +163,7 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     
     switch_::Switch *power_ = {nullptr};
     switch_::Switch *state_led_ = {nullptr};
-    switch_::Switch *lock_ = {nullptr};
+    switch_::Switch *beeper_ = {nullptr};
 
 };
 
@@ -174,7 +178,6 @@ class SkyKettlePowerSwitch : public switch_::Switch {
           this->parent_->send_off();
       }
     }
-
   protected:
     SkyKettle *parent_;
 };
@@ -184,10 +187,21 @@ class SkyKettleBackgroundSwitch : public switch_::Switch {
     explicit SkyKettleBackgroundSwitch(SkyKettle *parent): parent_(parent) {}
     void write_state(bool state) override {
       if(state != this->parent_->kettle_state.state_led) {
-        this->parent_->set_state_led(state);
+        this->parent_->send_state_led(state);
       }
     }
+  protected:
+    SkyKettle *parent_;
+};
 
+class SkyKettleBeeperSwitch : public switch_::Switch {
+  public:
+    explicit SkyKettleBeeperSwitch(SkyKettle *parent): parent_(parent) {}
+    void write_state(bool state) override {
+      if(state != (this->parent_->kettle_state.beeper != 0x00)) {
+        this->parent_->send_beeper(state);
+      }
+    }
   protected:
     SkyKettle *parent_;
 };
@@ -215,29 +229,27 @@ class SkyKettleBoilTimeAdjNumber : public number::Number {
 class SkyKettleBackgroundLight : public light::LightOutput {
   public:
     void set_parent(SkyKettle *parent) { this->parent_ = parent; }
-    
     light::LightTraits get_traits() override {
       light::LightTraits traits{};
       traits.set_supported_color_modes({light::ColorMode::RGB});
       return traits;
     }
-    
     void setup_state(light::LightState *state) override { this->parent_->light_state = state; }
-    
-    void update_state(light::LightState *state) override {
-      ESP_LOGI("CLR", "Update:");
-    }
-    
     void write_state(light::LightState *state) override {
+      if(this->parent_->send_data[22]) {
+        this->parent_->send_data[22] = 0x00;
+        return;
+      }
       if(this->parent_->send_data[20] == 95)
         this->parent_->send_data[20] = 0;
       if(state->remote_values.is_on()) {
-        ESP_LOGI("CLR", "Write State: ON");
         CTState *wld;
         if(this->parent_->send_data[20] == 0) {
-          if(this->parent_->kettle_state.programm != 0x03)
-            this->parent_->on_off_light(true);
-          else {
+          if(this->parent_->kettle_state.programm != 0x03) {
+            if(!this->parent_->kettle_state.power)
+              this->parent_->on_off_light(true);
+          }
+          else if(this->parent_->kettle_state.full_init) {
             wld = &this->parent_->kettle_state.night_light;
             wld->ccold.red =
             wld->cwarm.red =
@@ -291,9 +303,6 @@ class SkyKettleBackgroundLight : public light::LightOutput {
             }
           }
         }
-        else if(this->parent_->send_data[20] == 9) {
-        
-        }
         else if(this->parent_->send_data[20] == 10) {
         
         }
@@ -302,9 +311,10 @@ class SkyKettleBackgroundLight : public light::LightOutput {
         }
       }
       else {
-        ESP_LOGI("CLR", "Write State: OFF");
-        if(this->parent_->send_data[20] == 0)
-          this->parent_->on_off_light(false);
+        if(this->parent_->send_data[20] == 0) {
+          if(this->parent_->kettle_state.full_init)
+            this->parent_->on_off_light(false);
+        }
         else {
           if((this->parent_->send_data[20] > 0) && (this->parent_->send_data[20] < 5)) {
             this->parent_->send_data[20] = 0;

@@ -10,6 +10,7 @@ from esphome.components import(
 )
 from esphome.const import (
   CONF_ACCURACY_DECIMALS,
+  CONF_BEEPER,
   CONF_DEFAULT_TRANSITION_LENGTH,
   CONF_ENERGY,
   CONF_ENTITY_CATEGORY,
@@ -51,8 +52,7 @@ SkyKettle = skykettle_ns.class_("SkyKettle", cg.Component, ready4sky.R4SDriver)
 
 SkyKettlePowerSwitch = skykettle_ns.class_("SkyKettlePowerSwitch", switch.Switch)
 SkyKettleBackgroundSwitch = skykettle_ns.class_("SkyKettleBackgroundSwitch", switch.Switch)
-SkyKettleLockSwitch = skykettle_ns.class_("SkyKettleLockSwitch", switch.Switch)
-#SkyKettleBeepSwitch = skykettle_ns.class_("SkyKettleBeepSwitch", switch.Switch)
+SkyKettleBeeperSwitch = skykettle_ns.class_("SkyKettleBeeperSwitch", switch.Switch)
 
 SkyKettleTargetNumber = skykettle_ns.class_("SkyKettleTargetNumber", number.Number)
 SkyKettleBoilTimeAdjNumber = skykettle_ns.class_("SkyKettleBoilTimeAdjNumber", number.Number)
@@ -60,8 +60,7 @@ SkyKettleBoilTimeAdjNumber = skykettle_ns.class_("SkyKettleBoilTimeAdjNumber", n
 SkyKettleBackgroundLight = skykettle_ns.class_("SkyKettleBackgroundLight", light.LightOutput)
 
 MODEL_TYPE = {
-  "RK-G200":   4,
-  "RK-G200S":  8,
+  "RK-G200S":  8, "RK-G200S-E":  8,
   "RK-G201S":  8,
   "RK-G202S":  8,
   "RK-G203S":  8,
@@ -72,16 +71,16 @@ MODEL_TYPE = {
   "RK-G213S":  8,
   "RK-G214S":  8, "RFS-KKL003":  8,
   "RK-G215S":  8,
-  "RK-G233S": 16,
-  "RK-G240S": 16,
-  "RK-M136S": 64,
-  "RK-M139S": 64,
-  "RK-M170S":  1,
-  "RK-M171S":  1,
-  "RK-M173S":  2,
-  "RK-M215S": 32,
-  "RK-M216S": 32,
-  "RK-M223S": 32,
+  "RK-G233S":  8,
+  "RK-G240S":  8,
+  "RK-M136S":  8,
+  "RK-M139S": 16,
+  "RK-M170S":  1, "RK-M170S-E":  1,
+  "RK-M171S":  2,
+  "RK-M173S":  1, "RK-M173S-E":  1,
+  "RK-M215S": 16,
+  "RK-M216S": 16, "RK-M216S-E": 16,
+  "RK-M223S": 16,
 }
 
 CONF_CUP_CORRECT = "cup_correction"
@@ -104,6 +103,7 @@ ICON_TEMP_WATER = "mdi:thermometer-lines"
 ICON_WORK_CYCLES = "mdi:calendar-refresh"
 ICON_WORK_TIME = "mdi:calendar-clock"
 UNIT_HOURS = "h"
+
 MULTI_CONF = 2
 
 CONFIG_SCHEMA = (
@@ -194,6 +194,12 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ICON, default="mdi:led-variant-on"): switch.icon,
               }
             ),
+            cv.Optional(CONF_BEEPER): switch.SWITCH_SCHEMA.extend(
+              {
+                cv.GenerateID(): cv.declare_id(SkyKettleBeeperSwitch),
+                cv.Optional(CONF_ICON, default="mdi:volume-high"): switch.icon,
+              }
+            ),
             cv.Optional(CONF_TARGET_TEMP): number.NUMBER_SCHEMA.extend(
               {
                 cv.GenerateID(): cv.declare_id(SkyKettleTargetNumber),
@@ -277,6 +283,11 @@ async def to_code(config):
     swtch = cg.new_Pvariable(conf[CONF_ID], var)
     await switch.register_switch(swtch, conf)
     cg.add(var.set_state_led(swtch))
+  if CONF_BEEPER in params:
+    conf = params[CONF_BEEPER]
+    swtch = cg.new_Pvariable(conf[CONF_ID], var)
+    await switch.register_switch(swtch, conf)
+    cg.add(var.set_beeper(swtch))
   if CONF_TARGET_TEMP in params:
     numb = await number.new_number(params[CONF_TARGET_TEMP], min_value=35.0, max_value=100.0, step=5.0)
     cg.add(numb.set_parent(var))
