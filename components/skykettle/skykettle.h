@@ -87,7 +87,7 @@ struct CupEngineState {
   float     value_finale = 0.0;
 };
 
-struct IndicationState {
+struct IndicKettleState {
   uint8_t     time_period = 30;
   uint32_t    change_time = 0;
   std::string text_power    = "Off";    // power or lock status
@@ -130,10 +130,10 @@ class SkyKettle : public r4s::R4SDriver, public Component {
     void on_off_light(bool state);
     void send_color_timing();
     
-    bool            is_ready = false;
-    KettleState     kettle_state;
-    CupEngineState  cup_state;  // параметры механизма расчета чашек воды
-    IndicationState indication;
+    bool              is_ready = false;
+    KettleState       kettle_state;
+    CupEngineState    cup_state;  // параметры механизма расчета чашек воды
+    IndicKettleState  indication;
     
     light::LightState *light_state{nullptr};
     

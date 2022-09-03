@@ -195,7 +195,7 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       if(data[1] == this->cmd_count) {
         this->kettle_state.version = data[3];
         this->kettle_state.relise = data[4];
-        ESP_LOGI(TAG, "Version: %2.2f", (data[3] + data[4]*0.01));
+        ESP_LOGI(TAG, "%s Version: %2.2f", this->mnf_model.c_str(), (data[3] + data[4]*0.01));
         if(this->kettle_state.type & 0xE7) {// RK-M170S, RK-M171S, RK-M173S и все модели, на которые нет информации
           this->kettle_state.full_init = true;
           this->send_(0x06);
@@ -486,7 +486,7 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           }
         }
       }
-      is_ready = true;
+      this->is_ready = true;
       break;
     }
     case 0x32: {
