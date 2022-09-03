@@ -139,6 +139,19 @@ bool R4SEngine::ble_setup_() {
   return true;
 }
 
+void R4SEngine::loop() {
+  auto now = global_r4s_engine->get_time()->now();
+  if (now.is_valid()) {
+    for(auto *driver : global_r4s_engine->drivers_) {
+      if(now.timestamp >= driver->sync_data_time) {
+        driver->sync_data_time = now.timestamp + driver->sync_data_period;
+        if(driver->state() == DrvState::ESTABLISHED)
+          driver->sync_data_();
+      }
+    }
+  }
+}
+
 void R4SEngine::start_scan() {
   if(this->is_scaned_)
     return;
@@ -220,15 +233,6 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
                   is_present = false;
                 }
               }
-              else if(driver->state() == DrvState::ESTABLISHED) {
-                auto now = global_r4s_engine->get_time()->now();
-                if (now.is_valid())
-                  if(now.timestamp >= driver->sync_data_time) {
-                    driver->sync_data_time = now.timestamp + driver->sync_data_period;
-                    driver->sync_data_();
-                  }
-              }
-              break;
             }
           }
           if(!is_present) {
@@ -537,7 +541,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_WRITE_CHAR_EVT: {
-//      ESP_LOGD(TAG, "(%d) WRITE_CHAR", event);
+//      ESP_LOGD(TAG, "(%d) WRITE_CHAR for AppId=%d", event, this->app_id);
       if (param->write.status != ESP_GATT_OK){
         ESP_LOGE(TAG, "Write char error = %d", param->write.status);
         if (param->write.status == 5)
@@ -551,7 +555,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-//      ESP_LOGD(TAG, "(%d) NOTIFY %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) NOTIFY for AppId=%d", event, this->app_id);
       if ((param->notify.is_notify) && (param->notify.handle == this->rx_char_handle)) {
         auto now = global_r4s_engine->get_time()->now();
         if (now.is_valid()) {

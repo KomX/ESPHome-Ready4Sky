@@ -97,6 +97,7 @@ class R4SEngine : public Component {
     float get_setup_priority() const override;
     void setup() override;
     void dump_config() override;
+    void loop() override;
     
     void set_scan_duration(uint32_t scan_duration) { scan_duration_ = scan_duration; }
     void set_scan_active(bool scan_active) { scan_params_.scan_type = scan_active ? BLE_SCAN_TYPE_ACTIVE:BLE_SCAN_TYPE_PASSIVE; }
