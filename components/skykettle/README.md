@@ -4,6 +4,9 @@
 #### Установка
 В конфигурационный файл **yaml** добавить следующие строки:
 ```yml
+substitutions:
+  kettle: RK-M216S  ### Впишите наименование Вашей модели чайника
+
 skykettle:
   - mac_address: XX:XX:XX:XX:XX:XX  
     model: RK-M216S  
@@ -31,7 +34,7 @@ skykettle:
         name: ${kettle} Power
       target_temperature:
         name: ${kettle} Target
-      boil_time_adjustment:   ###ВНИМАНИЕ!### Все последующие органы управления не работают с моделями RK-M17xS.
+      boil_time_adjustment:   ### ВНИМАНИЕ! ### Все последующие органы управления не работают с моделями RK-M17xS.
         name: ${kettle} Boil Adj
       state_led:
         name: ${kettle} State Led
