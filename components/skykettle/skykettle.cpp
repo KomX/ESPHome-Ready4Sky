@@ -195,7 +195,7 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       if(data[1] == this->cmd_count) {
         this->kettle_state.version = data[3];
         this->kettle_state.relise = data[4];
-        ESP_LOGI(TAG, "%s Version: %2.2f", this->mnf_model.c_str(), (data[3] + data[4]*0.01));
+        ESP_LOGI(TAG, "%s INFO:   Version: %2.2f", this->mnf_model.c_str(), (data[3] + data[4]*0.01));
         if(this->kettle_state.type & 0xE7) {// RK-M170S, RK-M171S, RK-M173S и все модели, на которые нет информации
           this->kettle_state.full_init = true;
           this->send_(0x06);
@@ -319,11 +319,11 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
             && ((timestamp - this->kettle_state.off_line_time) > 10)) {
         float speed_down_temp = (float)(this->kettle_state.off_line_temp - moment_value) 
                               / (float)(timestamp - this->kettle_state.off_line_time);
-        ESP_LOGI(TAG, "Testing Raw Water 0.07 < %f °C/s", speed_down_temp);
+        ESP_LOGI(TAG, "%s INFO:   Testing Raw Water 0.07 < %f °C/s", this->mnf_model.c_str(), speed_down_temp);
         if(speed_down_temp > 0.07) {
           this->kettle_state.raw_water = true;
           this->kettle_state.new_water_time = timestamp;
-          ESP_LOGI(TAG, "Raw Water!");
+          ESP_LOGI(TAG, "%s INFO:   Raw Water!", this->mnf_model.c_str());
         }
         this->kettle_state.control_water = false;
       }
@@ -350,9 +350,8 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           float cw = this->cup_state.value_finale * this->cup_state.cup_correct;
           this->kettle_state.cup_quantity = cw;
           this->kettle_state.water_volume = cw * this->cup_state.cup_volume;
-          ESP_LOGI(TAG, "Cup Quantity: %f,  Water Volume: %d", 
-                    this->kettle_state.cup_quantity, 
-                    this->kettle_state.water_volume);
+          ESP_LOGI(TAG, "%s INFO:   Cup Quantity: %f,  Water Volume: %d", this->mnf_model.c_str(),
+                    this->kettle_state.cup_quantity, this->kettle_state.water_volume);
           if(this->cup_quantity_ != nullptr)
             this->cup_quantity_->publish_state(this->kettle_state.cup_quantity);
           if(this->water_volume_ != nullptr)
@@ -588,17 +587,17 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       if(data[1] == this->cmd_count) {
         // получение времени наработки
         this->kettle_state.work_time = (data[5] + (data[6]<<8) + (data[7]<<16) + (data[8]<<24));
-        ESP_LOGI(TAG, "Work Time %d sec", this->kettle_state.work_time);
+        ESP_LOGI(TAG, "%s INFO:   Work Time %d sec", this->mnf_model.c_str(), this->kettle_state.work_time);
         if(this->work_time_ != nullptr)
           this->work_time_->publish_state(this->kettle_state.work_time / 3600);
         // получение потреблённой энергии
         this->kettle_state.energy = (data[9] + (data[10]<<8) + (data[11]<<16) + (data[12]<<24));
-        ESP_LOGI(TAG, "Energy %d Wh", this->kettle_state.energy);
+        ESP_LOGI(TAG, "%s INFO:   Energy %d Wh", this->mnf_model.c_str(), this->kettle_state.energy);
         if(this->energy_ != nullptr)
           this->energy_->publish_state(this->kettle_state.energy*0.001);
         if(this->kettle_state.type & 0x10) { // получение циклов кипячения для RK-M21xS, RK-M13xS
           this->kettle_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
-          ESP_LOGI(TAG, "Work Cycles (47) %d", this->kettle_state.work_cycles);
+          ESP_LOGI(TAG, "%s INFO:   Work Cycles (47) %d", this->mnf_model.c_str(), this->kettle_state.work_cycles);
           if(this->work_cycles_ != nullptr)
             this->work_cycles_->publish_state(this->kettle_state.work_cycles);
           this->send_(0x06);
@@ -613,7 +612,7 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
     case 0x50: {
       if(data[1] == this->cmd_count) { // получение циклов кипячения для RK-G2xxS
         this->kettle_state.work_cycles = (data[6] + (data[7]<<8) + (data[8]<<16) + (data[9]<<24));
-        ESP_LOGI(TAG, "Work Cycles (50) %d", this->kettle_state.work_cycles);
+        ESP_LOGI(TAG, "%s INFO:   Work Cycles (50) %d", this->mnf_model.c_str(), this->kettle_state.work_cycles);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->kettle_state.work_cycles);
         this->send_(0x06);
@@ -633,7 +632,7 @@ void SkyKettle::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
     case 0xFF: { // autorization
       if((data[1] == this->cmd_count) && data[3]) {
         this->is_authorize = true;
-        ESP_LOGI(TAG, "%s Autorized.", this->mnf_model.c_str());
+        ESP_LOGI(TAG, "%s INFO:   Autorized.", this->mnf_model.c_str());
         this->send_(0x01);
       }
       else
@@ -739,9 +738,6 @@ void SkyKettle::send_(uint8_t command) {
     }
     case 0x6E:{
       this->send_data_len = 12;
-//      char stz[] = {0,0,0} ;
-//      this->time_zone.copy(stz, 3, 1);
-//      int32_t tz = (((stz[1])-48)*10 + ((stz[2])-48))*((stz[0] == '+')?3600:-3600);
       memcpy(&this->send_data[3], &this->notify_data_time, 4);
       memcpy(&this->send_data[7], &this->tz_offset, 4);
       break;
