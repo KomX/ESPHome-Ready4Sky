@@ -320,6 +320,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             ((am==8)?"REQ_SC_ONLY": 
             ((am==9)?"REQ_SC_BOND": 
             ((am==12)?"REQ_SC_MITM":"REQ_SC_MITM_BOND")))))));
+//        ESP_LOGD(TAG, "Security Key = %x", param->ble_security.auth_cmpl.key);
       }
       break;
     }
@@ -330,13 +331,6 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             ((kt & 0x11)?"ENC":
             ((kt & 0x22)?"ID":
             ((kt & 0x44)?"CSRK":"LK"))));
-      break;
-    }
-    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT: {
-      ESP_LOGI(TAG, "Update Connection Params: status = %d, min_int = %d, max_int = %d, conn_int = %d, latency = %d, timeout = %d",
-          param->update_conn_params.status, param->update_conn_params.min_int,
-          param->update_conn_params.max_int, param->update_conn_params.conn_int,
-          param->update_conn_params.latency, param->update_conn_params.timeout);
       break;
     }
     default:{
@@ -393,11 +387,28 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
     case ESP_GATTC_CONNECT_EVT: {
 //      ESP_LOGD(TAG, "(%d) CONNECT %d", event, this->app_id);
       esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_ONLY;
+//      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM;
 //      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-      esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
       esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+      
+      esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
       esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+      
+//      uint8_t key_size = 16;
+//      esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+      
+//      uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+//      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+    
+//      uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+//      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+      
+//      uint8_t oob_support = ESP_BLE_OOB_DISABLE;
+//      esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
+      
       esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT);
+      
+      
 //      esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
       break;
     }
@@ -434,9 +445,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
 //      ESP_LOGD(TAG, "(%d) SEARCH_RES %d", event, this->app_id);
       this->service_start_handle = param->search_res.start_handle;
       this->service_end_handle = param->search_res.end_handle;
-      ESP_LOGD(TAG, "UUID: %s, start handle: 0x%X, end handle: 0x%X.", 
-            this->uuid_to_string(param->search_res.srvc_id.uuid).c_str(),
-            param->search_res.start_handle, param->search_res.end_handle);
+//      ESP_LOGD(TAG, "UUID: %s, start handle: 0x%X, end handle: 0x%X.", 
+//            this->uuid_to_string(param->search_res.srvc_id.uuid).c_str(),
+//            param->search_res.start_handle, param->search_res.end_handle);
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT: {
@@ -468,9 +479,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       }
       if (char_elem_result.properties & ESP_GATT_CHAR_PROP_BIT_WRITE) {
         this->tx_char_handle = char_elem_result.char_handle;
-        ESP_LOGD(TAG, "UUID: %s, TX handle: 0x%X.",
-              this->uuid_to_string(r4s_tx_char_uuid).c_str(),
-              this->tx_char_handle);
+//        ESP_LOGD(TAG, "UUID: %s, TX handle: 0x%X.",
+//              this->uuid_to_string(r4s_tx_char_uuid).c_str(),
+//              this->tx_char_handle);
       }
       uint16_t count_rx = count;
       status = esp_ble_gattc_get_char_by_uuid( this->gattc_if, this->conn_id,
@@ -483,9 +494,9 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       }
       if (char_elem_result.properties & ESP_GATT_CHAR_PROP_BIT_NOTIFY) {
         this->rx_char_handle = char_elem_result.char_handle;
-        ESP_LOGD(TAG, "UUID: %s, RX handle: 0x%X.",
-              this->uuid_to_string(r4s_rx_char_uuid).c_str(),
-              this->rx_char_handle);
+//        ESP_LOGD(TAG, "UUID: %s, RX handle: 0x%X.",
+//              this->uuid_to_string(r4s_rx_char_uuid).c_str(),
+//              this->rx_char_handle);
         esp_ble_gattc_register_for_notify(this->gattc_if, this->remote_bda, this->rx_char_handle);
       }
       break;
@@ -544,8 +555,8 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
 //      ESP_LOGD(TAG, "(%d) WRITE_CHAR for AppId=%d", event, this->app_id);
       if (param->write.status != ESP_GATT_OK){
         ESP_LOGE(TAG, "Write char error = %d", param->write.status);
-        if (param->write.status == 5)
-          esp_ble_remove_bond_device(this->remote_bda);
+//        if (param->write.status == 5)
+//          esp_ble_remove_bond_device(this->remote_bda);
         gatt_err = 1;
       }
       else {
