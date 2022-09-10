@@ -20,7 +20,6 @@ namespace r4s = esphome::ready4sky;
 struct PlugState {
   uint8_t     type = 0;
   uint8_t     status = -1;
-  uint8_t     position = -1;
   uint8_t     version;
   uint8_t     relise;
   uint8_t     wait_command = 0;

@@ -232,7 +232,7 @@ void SkyPlug::send_(uint8_t command) {
               ESP_GATT_WRITE_TYPE_RSP, ESP_GATT_AUTH_REQ_NONE);
     if ((status == ESP_GATT_OK) && (this->send_data[2] != 0x06)) {
 //    if (status == ESP_GATT_OK) {
-        ESP_LOGD(TAG, "%s SEND:  %s", this->mnf_model.c_str(),
+        ESP_LOGD(TAG, "%s SEND:   %s", this->mnf_model.c_str(),
               format_hex_pretty(this->send_data, this->send_data_len).c_str());
         this->send_data_len = 0;
     }
