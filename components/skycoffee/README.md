@@ -9,7 +9,7 @@
 substitutions:
   coffee: RCM-M1519S  ### Впишите наименование Вашей модели
 
-skyplug:
+skycoffee:
   - mac_address: XX:XX:XX:XX:XX:XX  
     model: RCM-M1519S
     informing:
