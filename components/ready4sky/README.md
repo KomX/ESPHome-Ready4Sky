@@ -9,7 +9,7 @@ external_components:
   - source: github://KomX/ESPHome-Ready4Sky/components
 
 substitutions:
-  gate_id: Gate
+  gate: Gate
 
 time:
   platform: homeassistant 
@@ -25,9 +25,9 @@ ready4sky:
 
 button:
   - platform: restart ### сброс модуля
-    name: ${gate_id} Restart
+    name: ${gate} Restart
   - platform: template ### включение или выключение режима поиска новых устройст
-    name: ${gate_id} Scan New Devices
+    name: ${gate} Scan New Devices
     icon: mdi:magnify
     entity_category: config
     on_press:
