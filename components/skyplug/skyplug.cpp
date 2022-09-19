@@ -143,7 +143,7 @@ void SkyPlug::parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp
           this->work_time_->publish_state(this->plug_state.work_time / 3600);
         // получение циклов включения
         this->plug_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Work Cycles (47) %d", this->mnf_model.c_str(), this->plug_state.work_cycles);
+        ESP_LOGI(TAG, "%s INFO:   Work Cycles %d", this->mnf_model.c_str(), this->plug_state.work_cycles);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->plug_state.work_cycles);
         this->send_(0x06);
