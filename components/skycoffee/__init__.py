@@ -110,23 +110,17 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_CONTROL): cv.All(
         cv.Schema(
           {
-            cv.Required(CONF_POWER): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyCoffeePowerSwitch),
-                cv.Optional(CONF_ICON, default=ICON_COFFEE): switch.icon,
-              }
+            cv.Required(CONF_POWER): switch.switch_schema(
+              SkyCoffeePowerSwitch,
+              icon = ICON_COFFEE,
             ),
-            cv.Optional(CONF_STRENGTH): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyCoffeeStrengthSwitch),
-                cv.Optional(CONF_ICON, default="mdi:wifi-strength-2"): switch.icon,
-              }
+            cv.Optional(CONF_STRENGTH): switch.switch_schema(
+              SkyCoffeeStrengthSwitch,
+              icon = "mdi:wifi-strength-2",
             ),
-            cv.Optional(CONF_LOCK): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyCoffeeLockSwitch),
-                cv.Optional(CONF_ICON, default="mdi:lock"): switch.icon,
-              }
+            cv.Optional(CONF_LOCK): switch.switch_schema(
+              SkyCoffeeLockSwitch,
+              icon = "mdi:lock",
             ),
           }
         ),

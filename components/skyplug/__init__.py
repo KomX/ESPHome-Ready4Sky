@@ -90,17 +90,13 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_CONTROL): cv.All(
         cv.Schema(
           {
-            cv.Required(CONF_POWER): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyPlugPowerSwitch),
-                cv.Optional(CONF_ICON, default=ICON_PLUG): switch.icon,
-              }
+            cv.Required(CONF_POWER): switch.switch_schema(
+              SkyPlugPowerSwitch,
+              icon = ICON_PLUG,
             ),
-            cv.Optional(CONF_LOCK): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyPlugLockSwitch),
-                cv.Optional(CONF_ICON, default="mdi:lock"): switch.icon,
-              }
+            cv.Optional(CONF_LOCK): switch.switch_schema(
+              SkyPlugLockSwitch,
+              icon = "mdi:lock",
             ),
           }
         ),

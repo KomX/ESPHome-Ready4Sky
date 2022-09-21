@@ -182,23 +182,17 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_CONTROL): cv.All(
         cv.Schema(
           {
-            cv.Required(CONF_POWER): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyKettlePowerSwitch),
-                cv.Optional(CONF_ICON, default=ICON_KETTLE): switch.icon,
-              }
+            cv.Required(CONF_POWER): switch.switch_schema(
+              SkyKettlePowerSwitch,
+              icon = ICON_KETTLE,
             ),
-            cv.Optional(CONF_STATE_LED): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyKettleBackgroundSwitch),
-                cv.Optional(CONF_ICON, default="mdi:led-variant-on"): switch.icon,
-              }
+            cv.Optional(CONF_STATE_LED): switch.switch_schema(
+              SkyKettleBackgroundSwitch,
+              icon = "mdi:led-variant-on",
             ),
-            cv.Optional(CONF_BEEPER): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyKettleBeeperSwitch),
-                cv.Optional(CONF_ICON, default="mdi:volume-high"): switch.icon,
-              }
+            cv.Optional(CONF_BEEPER): switch.switch_schema(
+              SkyKettleBeeperSwitch,
+              icon = "mdi:volume-high",
             ),
             cv.Optional(CONF_TARGET_TEMP): number.NUMBER_SCHEMA.extend(
               {

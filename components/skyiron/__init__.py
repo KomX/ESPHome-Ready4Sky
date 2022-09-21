@@ -81,17 +81,13 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_CONTROL): cv.All(
         cv.Schema(
           {
-            cv.Required(CONF_POWER): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyIronPowerSwitch),
-                cv.Optional(CONF_ICON, default=ICON_IRON): switch.icon,
-              }
+            cv.Required(CONF_POWER): switch.switch_schema(
+              SkyIronPowerSwitch,
+              icon = ICON_IRON,
             ),
-            cv.Optional(CONF_SAFE_MODE): switch.SWITCH_SCHEMA.extend(
-              {
-                cv.GenerateID(): cv.declare_id(SkyIronSafeModeSwitch),
-                cv.Optional(CONF_ICON, default="mdi:shield-lock-open-outline"): switch.icon,
-              }
+            cv.Optional(CONF_SAFE_MODE): switch.switch_schema(
+              SkyIronSafeModeSwitch,
+              icon = "mdi:shield-lock-open-outline",
             ),
           }
         ),
