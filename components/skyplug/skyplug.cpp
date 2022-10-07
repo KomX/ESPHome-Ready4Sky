@@ -123,10 +123,23 @@ void SkyPlug::parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp
         ESP_LOGI(TAG, "%s NOTIFY: %s (state)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
       }
+      // remember mode update
+      if(this->plug_state.remember != data[13]) {
+        this->plug_state.remember = data[13];
+        ESP_LOGI(TAG, "%s NOTIFY: %s (remember mode)", this->mnf_model.c_str(),
+              format_hex_pretty(data, data_len).c_str());
+        if(this->remember_ != nullptr) {
+          if(this->plug_state.remember != 0x01)
+            this->remember_->publish_state(false);
+          else
+            this->remember_->publish_state(true);
+        }
+      }
       this->is_ready = true;
       break;
     }
-    case 0x16: {
+    case 0x16:
+    case 0x44: {
       if((data[1] == this->cmd_count) && data[3]) {
         this->send_(0x06);
       }
@@ -196,7 +209,8 @@ void SkyPlug::send_(uint8_t command) {
       this->send_data_len = 4;
       break;
     }
-    case 0x16:{
+    case 0x16:
+    case 0x44:{
       this->send_data_len = 5;
       break;
     }
@@ -265,6 +279,17 @@ void SkyPlug::send_lock(bool state) {
     this->send_(0x16);
   else
     this->plug_state.wait_command = 0x16;
+}
+
+void SkyPlug::send_remember(bool state) {
+  if(state)
+    this->send_data[3] = 0x01;
+  else
+    this->send_data[3] = 0x00;
+  if(this->is_ready)
+    this->send_(0x44);
+  else
+    this->plug_state.wait_command = 0x44;
 }
 
 }  // namespace skyplug

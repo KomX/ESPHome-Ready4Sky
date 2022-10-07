@@ -33,6 +33,7 @@ SkyPlug = skyplug_ns.class_("SkyPlug", cg.Component, ready4sky.R4SDriver)
 
 SkyPlugPowerSwitch = skyplug_ns.class_("SkyPlugPowerSwitch", switch.Switch)
 SkyPlugLockSwitch = skyplug_ns.class_("SkyPlugLockSwitch", switch.Switch)
+SkyPlugRememberSwitch = skyplug_ns.class_("SkyPlugRememberSwitch", switch.Switch)
 
 MODEL_TYPE = {
   "RSP-100S":  1,
@@ -42,6 +43,7 @@ MODEL_TYPE = {
 CONF_INFORM = "informing"
 CONF_CONTROL = "controlling"
 CONF_LOCK = "lock"
+CONF_REMEMBER = "remember_state"
 CONF_WORK_CYCLES = "work_cycles"
 CONF_WORK_TIME = "work_time"
 ICON_PLUG = "mdi:power-socket-eu"
@@ -98,6 +100,10 @@ CONFIG_SCHEMA = (
               SkyPlugLockSwitch,
               icon = "mdi:lock",
             ),
+            cv.Optional(CONF_REMEMBER): switch.switch_schema(
+              SkyPlugRememberSwitch,
+              icon = "mdi:connection",
+            ),
           }
         ),
       ),
@@ -137,4 +143,8 @@ async def to_code(config):
     swtch = cg.new_Pvariable(conf[CONF_ID], var)
     await switch.register_switch(swtch, conf)
     cg.add(var.set_lock(swtch))
-
+  if CONF_REMEMBER in params:
+    conf = params[CONF_REMEMBER]
+    swtch = cg.new_Pvariable(conf[CONF_ID], var)
+    await switch.register_switch(swtch, conf)
+    cg.add(var.set_remember(swtch))

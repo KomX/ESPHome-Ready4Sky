@@ -23,6 +23,8 @@ skyplug:
         name: ${plug} Power
       lock:
         name: ${plug} Lock
+      remember_state:
+        name: ${plug} Remember State
 ```
 #### Пояснения к коду	
 >**mac_address** *(Required)* Параметр. MAC адрес.  
@@ -38,6 +40,7 @@ skyplug:
 >**controlling** *(Required) Заголовок группы переключателей.  
 >>**power** *(Optional)* Переключатель вкл./выкл.   
 >>**lock** *(Optional)* Переключатель блокировки.  
+>>**remember_state** *(Optional)* Переключатель восстановления состояния при отключении электричества.  
 >>>**name** *(Required)* Имя сущности в HA. Указывается для всех сущностей объявляемых для HA.  
 >>>**id** *(Optional)* Идентификатор сущности для ESPHome. Указывается для использования сущности внутри скетча.  
 

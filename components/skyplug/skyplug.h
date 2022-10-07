@@ -19,11 +19,12 @@ namespace r4s = esphome::ready4sky;
 
 struct PlugState {
   uint8_t     type = 0;
-  uint8_t     status = -1;
+  uint8_t     status = 0xFF;
   uint8_t     version;
   uint8_t     relise;
   uint8_t     wait_command = 0;
-  uint8_t     lock = -1;
+  uint8_t     lock = 0xFF;
+  uint8_t     remember = 0xFF;
   uint32_t    work_cycles;
   uint32_t    work_time;
 };
@@ -39,9 +40,11 @@ class SkyPlug : public r4s::R4SDriver, public Component {
     void set_work_time(sensor::Sensor *work_time) { this->work_time_ = work_time; }
     void set_power(switch_::Switch *power) { this->power_ = power; }
     void set_lock(switch_::Switch *lock) { this->lock_ = lock; }
+    void set_remember(switch_::Switch *remember) { this->remember_ = remember; }
     
     void send_power(bool state);
     void send_lock(bool state);
+    void send_remember(bool state);
 
     bool            is_ready = false;
     PlugState       plug_state;
@@ -60,6 +63,7 @@ class SkyPlug : public r4s::R4SDriver, public Component {
     
     switch_::Switch *power_ = {nullptr};
     switch_::Switch *lock_;
+    switch_::Switch *remember_;
 };
 
 class SkyPlugPowerSwitch : public switch_::Switch {
@@ -80,6 +84,18 @@ class SkyPlugLockSwitch : public switch_::Switch {
     void write_state(bool state) override {
       if(state != (this->parent_->plug_state.lock != 0x00)) {
         this->parent_->send_lock(state);
+      }
+    }
+  protected:
+    SkyPlug *parent_;
+};
+
+class SkyPlugRememberSwitch : public switch_::Switch {
+  public:
+    explicit SkyPlugRememberSwitch(SkyPlug *parent): parent_(parent) {}
+    void write_state(bool state) override {
+      if(state != (this->parent_->plug_state.remember != 0x00)) {
+        this->parent_->send_remember(state);
       }
     }
   protected:
