@@ -51,8 +51,8 @@ skykettle:
 >**cup_volume** *(Optional, default=250)* Параметр. Задаёт объём воды в кружке.  
 >**cup_correction** *(Optional, default=1.0)* Параметр. Коэффициент корректирующий число кружек.  
 >  
->**informing** *(Required) Заголовок группы сенсоров.  
->>**temperature** *(Required) Сенсор текущей температуры воды.  
+>**informing** *(Required)* Заголовок группы сенсоров.  
+>>**temperature** *(Required)* Сенсор текущей температуры воды.  
 >>**cup_quantity** *(Optional)* Сенсор числа чашек воды в чайнике.  
 >>**water_volume** *(Optional)* Сенсор объёма воды в чайнике (ml).  
 >>**signal_strength** *(Optional)* Сенсор уровня сигнала от чайника.  
@@ -63,7 +63,7 @@ skykettle:
 >>>**name** *(Required)* Имя сущности в HA. Указывается для всех сущностей объявляемых для HA.  
 >>>**id** *(Optional)* Идентификатор сущности для ESPHome. Указывается для использования сущности внутри скетча.  
 >  
->**controlling** *(Required) Заголовок группы переключателей.  
+>**controlling** *(Required)* Заголовок группы переключателей.  
 >>**power** *(Optional)* Переключатель вкл./выкл.   
 >>**target_temperature** *(Optional)* Уставка целевой температуры. Выбор 35...90 с шагом 5 для режимов "Heat" и "Boil & Heat", выбор 100 для режима "Boil".  
 >>**boil_time_adjustment** *(Optional)* Уставка корректировки времени кипения -5...+5, шаг 1.  
