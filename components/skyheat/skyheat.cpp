@@ -61,9 +61,6 @@ void SkyHeat::verify_contig_() {
   pos = this->mnf_model.find("RFH-");
   if (pos != std::string::npos)
     this->conf_error = false;
-  pos = this->mnf_model.find("RSP-"); //!!!
-  if (pos != std::string::npos)       //!!!
-    this->conf_error = false;         //!!!
   if(this->conf_error)
     ESP_LOGE(TAG, "!!! %s product and %s component are not compatible !!!", this->mnf_model.c_str(), TAG);
 }
