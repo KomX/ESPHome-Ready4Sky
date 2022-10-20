@@ -72,9 +72,6 @@ void SkyCooker::verify_contig_() {
   pos = this->mnf_model.find("RFS-KMC");
   if (pos != std::string::npos)
     this->conf_error = false;
-  pos = this->mnf_model.find("RSP-"); //!!!
-  if (pos != std::string::npos)       //!!!
-    this->conf_error = false;         //!!!
   if(this->conf_error)
     ESP_LOGE(TAG, "!!! %s product and %s component are not compatible !!!", this->mnf_model.c_str(), TAG);
 }
@@ -169,7 +166,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x02: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[5] : EN[5];
-            else if(this->cooker_state.type & 0x08)
+            else if(this->cooker_state.type & 0x48)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[2] : EN[2];
             else
               this->indication.text_condition = "2";
@@ -178,7 +175,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x03: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[4] : EN[4];
-            else if(this->cooker_state.type & 0x08)
+            else if(this->cooker_state.type & 0x48)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[3] : EN[3];
             else
               this->indication.text_condition = "3";
@@ -187,7 +184,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x04: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[6] : EN[6];
-            else if(this->cooker_state.type & 0x08)
+            else if(this->cooker_state.type & 0x48)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[4] : EN[4];
             else
               this->indication.text_condition = "4";
@@ -196,7 +193,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x05: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[2] : EN[2];
-            else if(this->cooker_state.type & 0x08)
+            else if(this->cooker_state.type & 0x48)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[5] : EN[5];
             else
               this->indication.text_condition = "5";
@@ -205,7 +202,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x06: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[3] : EN[3];
-            else if(this->cooker_state.type & 0x08)
+            else if(this->cooker_state.type & 0x48)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[6] : EN[6];
             else
               this->indication.text_condition = "6";
@@ -457,23 +454,6 @@ void SkyCooker::send_timer_mode(bool state) {
 
 void SkyCooker::send_mode(uint8_t idx){
   if((this->cooker_state.power) || (this->data_temp[idx] == 0x00)) {
-/*
-    uint8_t sd[12];
-    sd[0] = 0x55;
-    sd[1] = 0xFF;
-    sd[2] = 0x05;
-    sd[3] = idx - 1;
-    sd[4] = (this->data_flags[idx] & 0x80) ? 0x03:0x00;
-    sd[5] = this->data_temp[idx];
-    sd[6] = this->data_hours[idx];
-    sd[7] = this->data_mins[idx];
-    sd[8] = 0x00;
-    sd[9] = 0x00;
-    sd[10] = 0x00;
-    sd[11] = 0xAA;
-    ESP_LOGD(TAG, "%s PSEUDO_SEND:   %s", this->mnf_model.c_str(),
-              format_hex_pretty(sd, 12).c_str());
-*/              
     if(!idx) {
       if(this->is_ready)
           this->send_(0x04);
