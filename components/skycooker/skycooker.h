@@ -34,9 +34,11 @@ struct CookerState {
   uint8_t     wait_command = 0;
   uint8_t     lock = -1;
   uint8_t     language = 1;
+  bool        autostart = false;
   bool        power = false;
   bool        postheat = false;
   bool        timer_mode = false;
+  bool        automode = false;
   uint8_t     viz_mode[2] = {0xFF, 0xFF};
   uint8_t     last_mode;
 };
@@ -67,6 +69,7 @@ class SkyCooker : public r4s::R4SDriver, public Component {
     void set_timer_hours(number::Number *value) { this->timer_hours_ = value; }
     void set_timer_minutes(number::Number *value) { this->timer_minutes_ = value; }
     void set_language(uint8_t value) { this->cooker_state.language = value; }
+    void set_autostart(bool value) { this->cooker_state.autostart = value; }
     
     void send_power(bool state);
     void send_postheat(bool state);

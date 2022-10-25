@@ -115,7 +115,6 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
     }
     case 0x03:
     case 0x04:
-    case 0x09:
     case 0x0A:
     case 0x0B:
     case 0x0C:
@@ -128,9 +127,16 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         err = true;
       break;
     }
-    case 0x05: {
-      if((data[1] == this->cmd_count) && data[3])
-        this->send_(0x06);
+    case 0x05:
+    case 0x09: {
+      if((data[1] == this->cmd_count) && data[3]) {
+        if(this->cooker_state.automode) {
+          this->cooker_state.automode = false;
+          this->send_(0x03);
+        }
+        else
+          this->send_(0x06);
+      }
       else
         err = true;
       break;
@@ -396,7 +402,6 @@ void SkyCooker::send_power(bool state) {
       this->cooker_state.minutes[this->cooker_state.bowl_num] = 0xFF;
       if(this->timer_mode_ != nullptr)
         this->timer_mode_->publish_state(false);
-        
       if(this->is_ready)
         this->send_(0x03);
       else
@@ -456,9 +461,9 @@ void SkyCooker::send_mode(uint8_t idx){
   if((this->cooker_state.power) || (this->data_temp[idx] == 0x00)) {
     if(!idx) {
       if(this->is_ready)
-          this->send_(0x04);
-        else
-          this->cooker_state.wait_command = 0x04;
+        this->send_(0x04);
+      else
+        this->cooker_state.wait_command = 0x04;
     }
     else {
       this->cooker_state.mode[this->cooker_state.bowl_num] = 0xFF;
@@ -470,13 +475,9 @@ void SkyCooker::send_mode(uint8_t idx){
   }
   else {
     this->send_data[3] = idx - 1;
-    if(this->data_flags[idx] & 0x40) {
-      if(this->is_ready)
-        this->send_(0x09);
-      else
-        this->cooker_state.wait_command = 0x09;
-    }
-    else {
+    if(this->cooker_state.autostart && (this->data_flags[idx] & 0x40))
+      this->cooker_state.automode = true;
+    if(this->data_flags[idx] & 0x20) {
       this->send_data[4] = (this->data_flags[idx] & 0x80) ? 0x03:0x00;
       this->send_data[5] = this->data_temp[idx];
       this->send_data[6] = this->data_hours[idx];
@@ -488,6 +489,12 @@ void SkyCooker::send_mode(uint8_t idx){
         this->send_(0x05);
       else
         this->cooker_state.wait_command = 0x05;
+    }
+    else {
+      if(this->is_ready)
+        this->send_(0x09);
+      else
+        this->cooker_state.wait_command = 0x09;
     }
   }
 }

@@ -60,6 +60,7 @@ CONF_TEMPERATURE_SETTING = "temperature_setting"
 CONF_TIMER_HOURS_SETTING = "timer_hours_setting"
 CONF_TIMER_MINUTES_SETTING = "timer_minutes_setting"
 CONF_TIMER_MODE = "delay/cooking_time"
+CONF_AUTOSTART = "autostart"
 ICON_COOKER = "mdi:stove"
 UNIT_HOUR = "h"
 UNIT_MINUTE = "min"
@@ -376,6 +377,7 @@ CONFIG_SCHEMA = (
       cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
       cv.Required(CONF_MODEL): cv.string, # cv.enum(MODEL_TYPE, upper=True),
       cv.Optional(CONF_LANGUAGE, default="RU"): cv.enum(LANGUAGE, upper=True),
+      cv.Optional(CONF_AUTOSTART, default=False): cv.boolean,
       cv.Optional(CONF_INFORM): cv.All(
         cv.Schema(
           {
@@ -467,6 +469,7 @@ async def to_code(config):
   await ready4sky.register_r4s_driver(var, config)
   cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
   cg.add(var.set_model(config[CONF_MODEL]))
+  cg.add(var.set_autostart(config[CONF_AUTOSTART]))
   modl = MODEL_TYPE[config[CONF_MODEL]]
   lang = LANGUAGE[config[CONF_LANGUAGE]]
   omd = OPTIONS_MODE_DATA[modl]

@@ -13,7 +13,8 @@ substitutions:
 skycooker:
   - mac_address: XX:XX:XX:XX:XX:XX  
     model: RMC-M800S
-    language: EN    ### Выберите из EN и RU. RU по умолчанию.
+    language: EN    # Выберите из EN и RU. RU по умолчанию.
+    autostart: True # False по умолчанию.
     informing:
       status_indicator:
         name: ${cooker} Status
@@ -41,6 +42,7 @@ skycooker:
 >**mac_address** *(Required)* Параметр. MAC адрес изделия.  
 >**model** *(Required)* Параметр. Наименование модели изделия.  
 >**language** *(Optional, default=RU)* Параметр. Задаёт язык списка меню (работ) и статусной строки.  
+>**autostart** *(Optional, default=False)* Параметр. Задаёт автоматическое включение при выборе режимов "Экспресс" и "Подогрев".  
 >  
 >**informing** *(Optional)* Заголовок группы сенсоров. Не прописывайте, если ни один сенсор не выбран.  
 >>**status_indicator** *(Optional)* Текстовый сенсор режима работы мультиварки.  
