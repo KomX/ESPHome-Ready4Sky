@@ -172,7 +172,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x02: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[5] : EN[5];
-            else if(this->cooker_state.type & 0x48)
+            else if(this->cooker_state.type & 0xC8)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[2] : EN[2];
             else
               this->indication.text_condition = "2";
@@ -181,7 +181,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x03: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[4] : EN[4];
-            else if(this->cooker_state.type & 0x48)
+            else if(this->cooker_state.type & 0xC8)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[3] : EN[3];
             else
               this->indication.text_condition = "3";
@@ -190,7 +190,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x04: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[6] : EN[6];
-            else if(this->cooker_state.type & 0x48)
+            else if(this->cooker_state.type & 0xC8)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[4] : EN[4];
             else
               this->indication.text_condition = "4";
@@ -199,7 +199,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x05: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[2] : EN[2];
-            else if(this->cooker_state.type & 0x48)
+            else if(this->cooker_state.type & 0xC8)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[5] : EN[5];
             else
               this->indication.text_condition = "5";
@@ -208,7 +208,7 @@ void SkyCooker::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
           case 0x06: {
             if(this->cooker_state.type & 0x01)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[3] : EN[3];
-            else if(this->cooker_state.type & 0x48)
+            else if(this->cooker_state.type & 0xC8)
               this->indication.text_condition = (this->cooker_state.language == 0x01) ? RU[6] : EN[6];
             else
               this->indication.text_condition = "6";
