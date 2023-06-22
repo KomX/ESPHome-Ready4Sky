@@ -573,7 +573,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
         if (now.is_valid()) {
           this->notify_data_time = now.timestamp;
           if(this->tz_offset == 0) {
-            this->tz_offset = ESPTime::timezone_offset();
+            this->tz_offset = ESPTime::timezone_offset() ;
           }
         }
         memcpy(this->notify_data, param->notify.value, param->notify.value_len);
