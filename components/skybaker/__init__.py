@@ -60,7 +60,6 @@ CONF_TIMER_MINUTES_SETTING = "timer_minutes_setting"
 CONF_DELAYED_START = "delayed_start"
 UNIT_HOUR = "h"
 UNIT_MINUTE = "min"
-
 MULTI_CONF = 1
 
 LANGUAGE = {
