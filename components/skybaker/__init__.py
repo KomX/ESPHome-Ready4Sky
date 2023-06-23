@@ -8,6 +8,7 @@ from esphome.components import(
   number,
   text_sensor,
 )
+
 from esphome.const import (
   CONF_ACCURACY_DECIMALS,
   CONF_ENTITY_CATEGORY,
@@ -80,16 +81,6 @@ OPTIONS_MODE_DATA = [
 # [
 #   [temp, hors, minute, bit-flags]
 # ],
-# bit-flags (uint8_t):
-#   B[7] - submode enable             (0x80)
-#   B[6] - autopower enable           (0x40)
-#   B[5] - expansion of modes enable  (0x20)
-#   B[4] - two bowl enable            (0x10)
-#   B[3] - preset temperature enable  (0x08)
-#   B[2] - masterchef light enable    (0x04)
-#   B[1] - delay start enable         (0x02)
-#   B[0] - postheat enable            (0x01)
-
 # 0 All Models
   [ 
     [0,0,0,0],
