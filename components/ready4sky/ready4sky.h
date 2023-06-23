@@ -84,7 +84,7 @@ class R4SDriver {
     int32_t sync_data_time = 0;
     int32_t sync_data_period = 1;
     int32_t update_rssi_time = 0;
-    int32_t update_rssi_period = 10;
+    int32_t update_rssi_period = 3;
     int32_t tz_offset = 0;
 
   protected:
