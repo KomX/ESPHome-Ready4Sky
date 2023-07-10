@@ -83,7 +83,7 @@ MODEL_TYPE = {
   "RMC-M226S":  7,  "RMC-M226S-E":  7,  "JK-MC501":   7,  "NK-MC10":  7,  
   "RMC-M227S":  7,
   "RMC-M800S":  0,
-  "RMC-M903S":  5,
+  "RMC-M903S":  5,  "RFS-KMC005":   5,
   "RMC-961S":   4,
   "RMC-CBD100S":1,  
   "RMC-CBF390S":2,
