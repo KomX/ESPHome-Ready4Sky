@@ -176,7 +176,7 @@ void R4SEngine::start_scan() {
 void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param ) {
   switch(event) {
     case ESP_GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE");
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_SET_LOCAL_PRIVACY_COMPLETE", event);
       if (param->local_privacy_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(TAG, "Config local privacy failed, error = %X", param->local_privacy_cmpl.status);
         break;
@@ -185,7 +185,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "GAP_BLE_SCAN_PARAM_SET_COMPLETE");
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_SCAN_PARAM_SET_COMPLETE", event);
       if(param->scan_param_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(TAG, "Set scan param failed, error = %X", param->scan_param_cmpl.status);
         break;
@@ -194,7 +194,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "GAP_BLE_SCAN_START_COMPLETE");
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_SCAN_START_COMPLETE", event);
       if (param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
         ESP_LOGE(TAG, "Scan start failed, error = %X", param->scan_start_cmpl.status);
       else
@@ -202,7 +202,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
   	  break;
   	}
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-//      ESP_LOGD(TAG, "GAP_BLE_SCAN_RESULT");
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_SCAN_RESULT", event);
       switch (param->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT: {
           uint64_t rst_address = ble_addr_to_uint64(param->scan_rst.bda);
@@ -277,7 +277,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
-//      ESP_LOGD(TAG, "GAP_BLE_SCAN_STOP");
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_SCAN_STOP_COMPLETE", event);
       if(param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(TAG, "Scan stop failed, error = %X", param->scan_stop_cmpl.status);
         break;
@@ -308,6 +308,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     case ESP_GAP_BLE_AUTH_CMPL_EVT: {
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_AUTH_CMPL", event);
       if (!param->ble_security.auth_cmpl.success) {
         ESP_LOGE(TAG, "Fail reason = 0x%X",param->ble_security.auth_cmpl.fail_reason);
       } 
@@ -321,11 +322,12 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             ((am==8)?"REQ_SC_ONLY": 
             ((am==9)?"REQ_SC_BOND": 
             ((am==12)?"REQ_SC_MITM":"REQ_SC_MITM_BOND")))))));
-//        ESP_LOGD(TAG, "Security Key = %x", param->ble_security.auth_cmpl.key);
+        ESP_LOGD(TAG, "Security Key = %x", param->ble_security.auth_cmpl.key);
       }
       break;
     }
     case ESP_GAP_BLE_KEY_EVT: {
+//      ESP_LOGD(TAG, "(%d) GAP_BLE_KEY", event);
       uint8_t kt = param->ble_security.ble_key.key_type;
       ESP_LOGD(TAG, "Security Key Type = (0x%02X) ESP_LE_KEY_%s%s", kt,
             ((!kt)?"NONE":((kt & 0x0F)?"P":"L")),
@@ -335,7 +337,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
       break;
     }
     default:{
-      ESP_LOGD("GAP", "GAP Event = 0x%02X", event);
+      ESP_LOGD(TAG, "GAP Event = 0x%02X(%d)", event, event);
       break;
     }
   }
@@ -376,7 +378,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
   uint8_t  gatt_err = 0;
   switch (event) {
     case ESP_GATTC_REG_EVT: {
-//      ESP_LOGD(TAG, "(%d) REG %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_REG AppID:%d", event, this->app_id);
       if (param->reg.status == ESP_GATT_OK) {
         this->gattc_if = esp_gattc_if;
         esp_ble_gap_config_local_privacy(true);
@@ -386,7 +388,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_CONNECT_EVT: {
-//      ESP_LOGD(TAG, "(%d) CONNECT %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_CONNECT AppID:%d", event, this->app_id);
       esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_ONLY;
 //      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM;
 //      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
@@ -414,7 +416,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_OPEN_EVT: {
-//      ESP_LOGD(TAG, "(%d) OPEN %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_OPEN AppID:%d", event, this->app_id);
       if (param->open.status != ESP_GATT_OK) {
         ESP_LOGE(TAG, "Connect to %s failed, status=%d", 
             this->parent()->address_str(this->address).c_str(), param->open.status);
@@ -432,7 +434,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_CFG_MTU_EVT: {
-//      ESP_LOGD(TAG, "(%d) CFG_MTU %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_CFG_MTU AppID:%d", event, this->app_id);
       if (param->cfg_mtu.status != ESP_GATT_OK) {
         ESP_LOGE(TAG, "cfg_mtu to %s failed, status %d", 
             this->parent()->address_str(this->address).c_str(), param->cfg_mtu.status);
@@ -443,7 +445,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_SEARCH_RES_EVT: {
-//      ESP_LOGD(TAG, "(%d) SEARCH_RES %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_SEARCH_RES AppID:%d", event, this->app_id);
       this->service_start_handle = param->search_res.start_handle;
       this->service_end_handle = param->search_res.end_handle;
 //      ESP_LOGD(TAG, "UUID: %s, start handle: 0x%X, end handle: 0x%X.", 
@@ -452,7 +454,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT: {
-//      ESP_LOGD(TAG, "(%d) SEARCH_CMPL %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_SEARCH_CMPL AppID:%d", event, this->app_id);
       if (param->search_cmpl.status != ESP_GATT_OK){
         ESP_LOGE(TAG, "search_cmpl to %s failed, status %d", 
             this->parent()->address_str(this->address).c_str(), param->search_cmpl.status);
@@ -503,7 +505,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
-//      ESP_LOGD(TAG, "(%d) REG_FOR_NOTIFY %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_REG_FOR_NOTIFY AppID:%d", event, this->app_id);
       if (param->reg_for_notify.status != ESP_GATT_OK) {
         ESP_LOGE(TAG, "reg_for_notify to %s failed, status %d",
             this->parent()->address_str(this->address).c_str(), param->reg_for_notify.status);
@@ -542,7 +544,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_WRITE_DESCR_EVT: {
-//      ESP_LOGD(TAG, "(%d) WRITE_DESCR %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_WRITE_DESCR AppID:%d", event, this->app_id);
       if (param->write.status != ESP_GATT_OK){
         ESP_LOGE(TAG, "write_descr to %s failed, status %d",
             this->parent()->address_str(this->address).c_str(), param->write.status);
@@ -553,7 +555,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_WRITE_CHAR_EVT: {
-//      ESP_LOGD(TAG, "(%d) WRITE_CHAR for AppId=%d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_WRITE_CHAR AppID:%d", event, this->app_id);
       if (param->write.status != ESP_GATT_OK){
         ESP_LOGE(TAG, "Write char error = %d", param->write.status);
 //        if (param->write.status == 5)
@@ -567,7 +569,7 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_NOTIFY_EVT: {
-//      ESP_LOGD(TAG, "(%d) NOTIFY for AppId=%d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_NOTIFY AppID:%d", event, this->app_id);
       if ((param->notify.is_notify) && (param->notify.handle == this->rx_char_handle)) {
         auto now = global_r4s_engine->get_time()->now();
         if (now.is_valid()) {
@@ -583,18 +585,18 @@ void R4SDriver::gattc_event_handler( esp_gattc_cb_event_t event, esp_gatt_if_t e
       break;
     }
     case ESP_GATTC_DISCONNECT_EVT: {
-//      ESP_LOGD(TAG, "(%d) DISCONNECT %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_DISCONNECT AppID:%d", event, this->app_id);
       break;
     }
     case ESP_GATTC_CLOSE_EVT: {
-//      ESP_LOGD(TAG, "(%d) CLOSE %d", event, this->app_id);
+//      ESP_LOGD(TAG, "(%d) GATTC_CLOSE AppID:%d", event, this->app_id);
       this->device_offline_();
       this->set_state(DrvState::IDLE);
       global_r4s_engine->start_scan();
       break;
     }
     default:{
-      ESP_LOGD("GATTC", "(%d) ???  App_ID: %d", event, this->app_id);
+      ESP_LOGD(TAG, "GATTC Event = 0x%02X(%d) App_ID:%d", event, event, this->app_id);
       break;
     }
   }
