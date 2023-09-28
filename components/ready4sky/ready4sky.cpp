@@ -322,8 +322,6 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
             ((am==8)?"REQ_SC_ONLY": 
             ((am==9)?"REQ_SC_BOND": 
             ((am==12)?"REQ_SC_MITM":"REQ_SC_MITM_BOND")))))));
-        ESP_LOGD(TAG, "%s SEND:   %s", this->mnf_model.c_str(),
-              );
         ESP_LOGD(TAG, "Security Key = %s", format_hex_pretty(param->ble_security.auth_cmpl.key, 16).c_str());
       }
       break;
