@@ -1,10 +1,11 @@
 ### Пояснения к использованию компонента skykettle.
 #### Описание
 Компонент skykettle предоставляет сервисы чайников REDMOND серии Ready4Sky.  
-Проверена работа со следующими моделями: **RK-G20xS**, **RK-G21xS**, **RK-G233S**, **RK-G240S**, **RK-M216S**, **RK-M223S**.  
-Требуют тестирования (логи трафика обмена) модели: **RK-M136S**, **RK-M139S**, **RK-M170S**, **RK-M171S, RK-M173S**, **RK-M215S**.
-#### Установка
-К строкам основного компонента ready4sky добавьте в скетч следующие строки:
+Проверена работа со следующими моделями: **RK-G20xS**, **RK-G21xS**, **RK-G233S**, **RK-G240S**, **RK-M171S**, **RK-M173S**, **RK-M216S**, **RK-M223S**.  
+Требуют тестирования (логи трафика обмена) модели: **RK-M136S**, **RK-M139S**, **RK-M170S**, **RK-M215S**.
+#### Установка ####
+К строкам основного компонента ready4sky добавьте в скетч следующие строки:  
+*Для моделей с органами управлением в ручке:*  
 ```yml
 substitutions:
   kettle: RK-M216S  ### Впишите наименование Вашей модели чайника
@@ -36,7 +37,7 @@ skykettle:
         name: ${kettle} Power
       target_temperature:
         name: ${kettle} Target
-      boil_time_adjustment:   ### ВНИМАНИЕ! ### Все последующие органы управления не работают с моделями RK-M17xS.
+      boil_time_adjustment:
         name: ${kettle} Boil Adj
       state_led:
         name: ${kettle} State Led
@@ -44,6 +45,33 @@ skykettle:
         name: ${kettle} Night Light
       beeper:
         name: ${kettle} Beeper
+```
+*Для моделей с органами управлением в подставке:*  
+```yml
+substitutions:
+  kettle: RK-M171S  ### Впишите наименование Вашей модели чайника
+
+skykettle:
+  - mac_address: XX:XX:XX:XX:XX:XX  
+    model: RK-M171S  
+    cup_volume: 250
+    cup_correction: 1.0
+    informing:
+      temperature:
+        name: ${kettle} Temperature
+      cup_quantity:
+        name: ${kettle} Cup(s)
+      water_volume:
+        name: ${kettle} Water Volume
+      signal_strength:
+        name: ${kettle} RSSI
+      status_indicator:
+        name: ${kettle} Status
+    controlling:
+      power:
+        name: ${kettle} Power
+      target_temperature:
+        name: ${kettle} Target
 ```
 #### Пояснения к коду	
 >**mac_address** *(Required)* Параметр. MAC адрес чайника.  
@@ -82,3 +110,16 @@ skykettle:
 ```
 - Разделив мерное количество воды на значение *Water Volume* из лога, получите корректирующее значение, которое и укажите в параметре *cup_correction* (не более 6 знаков после запятой).  
 - После перепрошивки чайник готов к работе. Удачи!  
+
+#### Как Beeper пробросить в УДЯ в виде Mute (Без звука)?
+Замените фрагмент
+```
+      beeper:
+        name: ${kettle} Beeper
+```
+на следующий
+```
+      beeper:
+        name: ${kettle} Mute
+        inverted: true
+```
