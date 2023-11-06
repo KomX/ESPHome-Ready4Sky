@@ -80,14 +80,14 @@ OPTIONS_MODE = [
 # 0 All Models
   [
     [
-      "Standby Mode",
+      "Standby",
       "Baking",
-      "Heating"
+      "Reheating"
     ],
     [
-      "Режим ожидания",
+      "Ожидание",
       "Выпекание", 
-      "Подогрев"
+      "Разогрев"
     ],
   ],
 ]
