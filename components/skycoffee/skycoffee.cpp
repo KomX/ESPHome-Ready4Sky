@@ -102,41 +102,39 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       break;
     }
     case 0x06: {
-      // обновление состояния зашишённого режима
-      if(this->coffee_state.lock != data[10]) {
-        this->coffee_state.lock = data[10];
-        ESP_LOGI(TAG, "%s NOTIFY: %s (lock)", this->mnf_model.c_str(),
-                    format_hex_pretty(data, data_len).c_str());
-        if(this->lock_ != nullptr) {
-          if(this->coffee_state.lock == 0x00)
-            this->lock_->publish_state(false);
-          else
-            this->lock_->publish_state(true);
-        }
-      }
       // обновление состояния выключателя
-      if(this->coffee_state.status != data[16]) {
-        this->coffee_state.status = data[16];
-        if(this->coffee_state.status == 0x00) {
-          this->power_->publish_state(false);
-        }
-        else if(this->coffee_state.status == 0x02) {
+      if(this->coffee_state.status != data[11]) {
+        this->coffee_state.status = data[11];
+        if(this->coffee_state.status != 0x00)
           this->power_->publish_state(true);
-        }
+        else
+          this->power_->publish_state(false);
         ESP_LOGI(TAG, "%s NOTIFY: %s (state)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
       }
-      if(this->coffee_state.type & 0x02) {
+      if(this->coffee_state.type & 0x06) {
+        // обновление состояния защищённого режима
+        if(this->coffee_state.lock != data[16]) {
+          this->coffee_state.lock = data[16];
+          ESP_LOGI(TAG, "%s NOTIFY: %s (lock)", this->mnf_model.c_str(),
+                    format_hex_pretty(data, data_len).c_str());
+          if(this->lock_ != nullptr) {
+            if(this->coffee_state.lock != 0x00)
+              this->lock_->publish_state(true);
+            else
+              this->lock_->publish_state(false);
+          }
+        }
         // обновление состояния крепости напитка
         if(this->coffee_state.strength != data[14]) {
           this->coffee_state.strength = data[14];
           ESP_LOGI(TAG, "%s NOTIFY: %s (strength)", this->mnf_model.c_str(),
                     format_hex_pretty(data, data_len).c_str());
           if(this->strength_ != nullptr) {
-            if(this->coffee_state.strength == 0x00)
-              this->strength_->publish_state(false);
-            else
+            if(this->coffee_state.strength != 0x00)
               this->strength_->publish_state(true);
+            else
+              this->strength_->publish_state(false);
           }
         }
       } 

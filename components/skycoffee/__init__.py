@@ -41,11 +41,11 @@ SkyCoffeeStrengthSwitch = skycoffee_ns.class_("SkyCoffeeStrengthSwitch", switch.
 
 
 MODEL_TYPE = {
-  "RCM-M1505S":  4,
-  "RCM-M1508S":  1,
+  "RCM-M1505S":  8,
+  "RCM-M1508S":  1, "RCM-1508S":  1,
   "RCM-M1509S":  2, "RCM-M1509S-A": 2,  "RCM-M1509S-E": 2,
   "RCM-M1519S":  2, "RFS-KCM002":  2,
-  "RCM-M1525S":  2,
+  "RCM-M1525S":  4,
 }
 
 CONF_INFORM = "informing"

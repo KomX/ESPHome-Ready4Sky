@@ -23,11 +23,11 @@ struct CoffeeState {
   uint8_t     strength = -1;
   uint8_t     version;
   uint8_t     relise;
-  uint8_t     wait_command = 0;
   uint8_t     lock = -1;
   uint32_t    work_cycles;
   uint32_t    work_time;
   uint32_t    energy;
+  uint8_t     wait_command = 0;
 };
 
 class SkyCoffee : public r4s::R4SDriver, public Component {
