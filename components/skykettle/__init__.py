@@ -32,6 +32,7 @@ from esphome.const import (
   DEVICE_CLASS_TEMPERATURE,
   ENTITY_CATEGORY_CONFIG,
   ENTITY_CATEGORY_DIAGNOSTIC,
+  ENTITY_CATEGORY_NONE,
   ICON_BLUETOOTH,
   ICON_COUNTER,
   ICON_NEW_BOX,
@@ -77,7 +78,7 @@ MODEL_TYPE = {
   "RK-M139S": 16,
   "RK-M170S":  1, "RK-M170S-E":  1,
   "RK-M171S":  2,
-  "RK-M173S":  1, "RK-M173S-E":  1,
+  "RK-M173S":  4, "RK-M173S-E":  4,
   "RK-M215S": 16,
   "RK-M216S": 16, "RK-M216S-E": 16,
   "RK-M223S": 16,
@@ -173,7 +174,7 @@ CONFIG_SCHEMA = (
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
-                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
+                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_DIAGNOSTIC): cv.entity_category,
               }
             ),
           }
@@ -201,7 +202,7 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='0'): cv.int_range(min=0, max=2),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_CELSIUS): cv.string_strict,
                 cv.Optional(CONF_MODE, default="SLIDER"): cv.enum(number.NUMBER_MODES, upper=True),
-                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
+                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_NONE): cv.entity_category,
               }
             ),
             cv.Optional(CONF_BOIL_TIME_ADJ): number.NUMBER_SCHEMA.extend(

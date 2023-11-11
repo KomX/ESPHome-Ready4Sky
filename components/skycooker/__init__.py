@@ -385,7 +385,7 @@ CONFIG_SCHEMA = (
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
-                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
+                cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_DIAGNOSTIC): cv.entity_category,
               }
             ),
             cv.Optional(CONF_SIGNAL_STRENGTH): sensor.sensor_schema(
