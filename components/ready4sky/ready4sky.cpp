@@ -351,7 +351,7 @@ void R4SEngine::gattc_event_handler_( esp_gattc_cb_event_t event, esp_gatt_if_t 
 
 void R4SEngine::dump_config() {
   ESP_LOGCONFIG(TAG, "Ready4Sky:");
-  ESP_LOGCONFIG(TAG, "  Scan Duration: %u s", this->scan_duration_);
+  ESP_LOGCONFIG(TAG, "  Scan Duration: %lu s", this->scan_duration_);
   ESP_LOGCONFIG(TAG, "  Scan Interval: %.1f ms", this->scan_params_.scan_interval * 0.625f);
   ESP_LOGCONFIG(TAG, "  Scan Window: %.1f ms", this->scan_params_.scan_window * 0.625f);
   ESP_LOGCONFIG(TAG, "  Scan Type: %s", this->scan_params_.scan_type ? "ACTIVE" : "PASSIVE");
@@ -613,7 +613,7 @@ std::string R4SDriver::uuid_to_string(esp_bt_uuid_t ud) {
       sprintf(sbuf, "0x%02X%02X", ud.uuid.uuid16 >> 8, ud.uuid.uuid16 & 0xff);
       break;
     case ESP_UUID_LEN_32:
-      sprintf(sbuf, "0x%02X%02X%02X%02X", ud.uuid.uuid32 >> 24, (ud.uuid.uuid32 >> 16 & 0xff),
+      sprintf(sbuf, "0x%02lx%02lx%02lx%02lx", ud.uuid.uuid32 >> 24, (ud.uuid.uuid32 >> 16 & 0xff),
               (ud.uuid.uuid32 >> 8 & 0xff), ud.uuid.uuid32 & 0xff);
       break;
     default:
