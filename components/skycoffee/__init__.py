@@ -36,20 +36,22 @@ skycoffee_ns = cg.esphome_ns.namespace("skycoffee")
 SkyCoffee = skycoffee_ns.class_("SkyCoffee", cg.Component, ready4sky.R4SDriver)
 
 SkyCoffeePowerSwitch = skycoffee_ns.class_("SkyCoffeePowerSwitch", switch.Switch)
+SkyCoffeeBuzzerSwitch = skycoffee_ns.class_("SkyCoffeeBuzzerSwitch", switch.Switch)
 SkyCoffeeLockSwitch = skycoffee_ns.class_("SkyCoffeeLockSwitch", switch.Switch)
 SkyCoffeeStrengthSwitch = skycoffee_ns.class_("SkyCoffeeStrengthSwitch", switch.Switch)
 
 
 MODEL_TYPE = {
-  "RCM-M1505S":  8,
+  "RCM-M1505S":  16,
   "RCM-M1508S":  1, "RCM-1508S":  1,
-  "RCM-M1509S":  2, "RCM-M1509S-A": 2,  "RCM-M1509S-E": 2,
+  "RCM-M1509S":  8, "RCM-M1509S-A": 8,  "RCM-M1509S-E": 8,
   "RCM-M1519S":  2, "RFS-KCM002":  2,
   "RCM-M1525S":  4,
 }
 
 CONF_INFORM = "informing"
 CONF_CONTROL = "controlling"
+CONF_BUZZER = "buzzer"
 CONF_LOCK = "lock"
 CONF_STRENGTH = "strength"
 CONF_WORK_CYCLES = "work_cycles"
@@ -120,6 +122,10 @@ CONFIG_SCHEMA = (
               SkyCoffeeLockSwitch,
               icon = "mdi:lock",
             ),
+            cv.Optional(CONF_BUZZER): switch.switch_schema(
+              SkyCoffeeBuzzerSwitch,
+              icon = "mdi:volume_low",
+            ),
           }
         ),
       ),
@@ -157,6 +163,11 @@ async def to_code(config):
   swtch = cg.new_Pvariable(conf[CONF_ID], var)
   await switch.register_switch(swtch, conf)
   cg.add(var.set_power(swtch))
+  if CONF_BUZZER in params:
+    conf = params[CONF_BUZZER]
+    swtch = cg.new_Pvariable(conf[CONF_ID], var)
+    await switch.register_switch(swtch, conf)
+    cg.add(var.set_buzzer(swtch))
   if CONF_LOCK in params:
     conf = params[CONF_LOCK]
     swtch = cg.new_Pvariable(conf[CONF_ID], var)
