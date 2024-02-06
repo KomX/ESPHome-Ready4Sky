@@ -264,9 +264,9 @@ void SkyCoffee::send_(uint8_t command) {
       this->send_data[3] = 0x18;
       this->send_data[4] = 0x01;
       this->send_data[5] = 0x01;
-      this->send_data[6] = (this->notify_data_time)%86400/3600;
-      this->send_data[7] = (this->notify_data_time)%3600/60;
-      this->send_data[8] = (this->notify_data_time)%60;
+      this->send_data[6] = (this->notify_data_time + this->tz_offset)%86400/3600;
+      this->send_data[7] = (this->notify_data_time + this->tz_offset)%3600/60;
+      this->send_data[8] = (this->notify_data_time + this->tz_offset)%60;
       break;
     }
     case 0x6E:{

@@ -124,7 +124,7 @@ CONFIG_SCHEMA = (
             ),
             cv.Optional(CONF_BUZZER): switch.switch_schema(
               SkyCoffeeBuzzerSwitch,
-              icon = "mdi:volume_low",
+              icon = "mdi:volume-high",
             ),
           }
         ),
