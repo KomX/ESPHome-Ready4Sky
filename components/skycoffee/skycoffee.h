@@ -25,6 +25,7 @@ struct CoffeeState {
   uint8_t     relise;
   uint8_t     buzzer = -1;
   uint8_t     lock = -1;
+  uint8_t     time_min = 0xFF;
   uint32_t    work_cycles;
   uint32_t    work_time;
   uint32_t    energy;

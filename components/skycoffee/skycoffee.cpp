@@ -79,15 +79,10 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         this->coffee_state.version = data[3];
         this->coffee_state.relise = data[4];
         ESP_LOGI(TAG, "%s INFO:   Version: %2.2f", this->mnf_model.c_str(), (data[3] + data[4]*0.01));
-        if(this->coffee_state.type & 0x06) {
-            this->send_(0x6e);
-        }
-        else {
-            if(this->coffee_state.type & 0x08)
-                this->send_(0x64);
-            else
-                this->send_(0x06);
-        }
+        if(this->coffee_state.type & 0x06)
+          this->send_(0x6e);
+        else
+          this->send_(0x06);
       }
       else
         err = true;
@@ -157,6 +152,13 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
               this->buzzer_->publish_state(true);
             else
               this->buzzer_->publish_state(false);
+          }
+        }
+        // обновление времени на индикаторе
+        if(this->coffee_state.time_min != data[9]) {
+          if((this->notify_data_time + this->tz_offset) != 0) {
+            this->coffee_state.time_min = (uint8_t)((this->notify_data_time + this->tz_offset)%3600/60);
+            this->coffee_state.wait_command = 0x64;
           }
         }
       }
