@@ -23,7 +23,9 @@ struct CoffeeState {
   uint8_t     strength = -1;
   uint8_t     version;
   uint8_t     relise;
+  uint8_t     buzzer = -1;
   uint8_t     lock = -1;
+  uint8_t     time_min = 0xFF;
   uint32_t    work_cycles;
   uint32_t    work_time;
   uint32_t    energy;
@@ -41,10 +43,12 @@ class SkyCoffee : public r4s::R4SDriver, public Component {
     void set_work_time(sensor::Sensor *work_time) { this->work_time_ = work_time; }
     void set_energy(sensor::Sensor *energy) { this->energy_ = energy; }
     void set_power(switch_::Switch *power) { this->power_ = power; }
+    void set_buzzer(switch_::Switch *buzzer) { this->buzzer_ = buzzer; }
     void set_lock(switch_::Switch *lock) { this->lock_ = lock; }
     void set_strength(switch_::Switch *strength) { this->strength_ = strength; }
     
     void send_power(bool state);
+    void send_buzzer(bool state);
     void send_lock(bool state);
     void send_strength(bool state);
 
@@ -65,6 +69,7 @@ class SkyCoffee : public r4s::R4SDriver, public Component {
     sensor::Sensor *energy_{nullptr};
     
     switch_::Switch *power_ = {nullptr};
+    switch_::Switch *buzzer_ = {nullptr};
     switch_::Switch *lock_ = {nullptr};
     switch_::Switch *strength_ = {nullptr};
 };
@@ -75,6 +80,18 @@ class SkyCoffeePowerSwitch : public switch_::Switch {
     void write_state(bool state) override {
       if(state != (this->parent_->coffee_state.status != 0x00)) {
         this->parent_->send_power(state);
+      }
+    }
+  protected:
+    SkyCoffee *parent_;
+};
+
+class SkyCoffeeBuzzerSwitch : public switch_::Switch {
+  public:
+    explicit SkyCoffeeBuzzerSwitch(SkyCoffee *parent): parent_(parent) {}
+    void write_state(bool state) override {
+      if(state != (this->parent_->coffee_state.buzzer != 0x00)) {
+        this->parent_->send_buzzer(state);
       }
     }
   protected:

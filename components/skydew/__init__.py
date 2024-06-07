@@ -320,7 +320,7 @@ async def to_code(config):
     cg.add(var.set_beeper(swtch))
   if CONF_TARGET_HUMIDITY in params:
     if modl == 1:
-      numb = await number.new_number(params[CONF_TARGET_HUMIDITY], min_value=35.0, max_value=70.0, step=5.0)
+      numb = await number.new_number(params[CONF_TARGET_HUMIDITY], min_value=30.0, max_value=70.0, step=5.0)
     else:
       numb = await number.new_number(params[CONF_TARGET_HUMIDITY], min_value=40.0, max_value=80.0, step=5.0)
     cg.add(numb.set_parent(var))

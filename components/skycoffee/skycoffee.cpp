@@ -79,7 +79,10 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         this->coffee_state.version = data[3];
         this->coffee_state.relise = data[4];
         ESP_LOGI(TAG, "%s INFO:   Version: %2.2f", this->mnf_model.c_str(), (data[3] + data[4]*0.01));
-        this->send_(0x6e);
+        if(this->coffee_state.type & 0x06)
+          this->send_(0x6e);
+        else
+          this->send_(0x06);
       }
       else
         err = true;
@@ -112,7 +115,7 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         ESP_LOGI(TAG, "%s NOTIFY: %s (state)", this->mnf_model.c_str(),
               format_hex_pretty(data, data_len).c_str());
       }
-      if(this->coffee_state.type & 0x06) {
+      if(this->coffee_state.type & 0x0e) {
         // обновление состояния защищённого режима
         if(this->coffee_state.lock != data[16]) {
           this->coffee_state.lock = data[16];
@@ -137,10 +140,32 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
               this->strength_->publish_state(false);
           }
         }
-      } 
+      }
+      if(this->coffee_state.type & 0x08) { //1509 
+        // обновление состояния звукового режима
+        if(this->coffee_state.buzzer != data[15]) {
+          this->coffee_state.buzzer = data[15];
+          ESP_LOGI(TAG, "%s NOTIFY: %s (buzzer)", this->mnf_model.c_str(),
+                    format_hex_pretty(data, data_len).c_str());
+          if(this->buzzer_ != nullptr) {
+            if(this->coffee_state.buzzer != 0x00)
+              this->buzzer_->publish_state(true);
+            else
+              this->buzzer_->publish_state(false);
+          }
+        }
+        // обновление времени на индикаторе
+        if(this->coffee_state.time_min != data[9]) {
+          if((this->notify_data_time + this->tz_offset) != 0) {
+            this->coffee_state.time_min = (uint8_t)((this->notify_data_time + this->tz_offset)%3600/60);
+            this->coffee_state.wait_command = 0x64;
+          }
+        }
+      }
       this->is_ready = true;
       break;
     }
+    case 0x3c:
     case 0x3e:
     case 0x1b: {
       if((data[1] == this->cmd_count) && data[3]) {
@@ -167,6 +192,14 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
         ESP_LOGI(TAG, "%s INFO:   Work Cycles (47) %d", this->mnf_model.c_str(), this->coffee_state.work_cycles);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->coffee_state.work_cycles);
+        this->send_(0x06);
+      }
+      else
+        err = true;
+      break;
+    }
+    case 0x64: { // set time for RCM-M1509S
+      if((data[1] == this->cmd_count) && data[3]) {
         this->send_(0x06);
       }
       else
@@ -217,6 +250,7 @@ void SkyCoffee::send_(uint8_t command) {
       this->send_data_len = 4;
       break;
     }
+    case 0x3c:
     case 0x3e:
     case 0x1b:{
       this->send_data_len = 5;
@@ -225,6 +259,16 @@ void SkyCoffee::send_(uint8_t command) {
     case 0x47:{
       this->send_data[3] = 0x00;
       this->send_data_len = 5;
+      break;
+    }
+    case 0x64:{
+      this->send_data_len = 10;
+      this->send_data[3] = 0x18;
+      this->send_data[4] = 0x01;
+      this->send_data[5] = 0x01;
+      this->send_data[6] = (this->notify_data_time + this->tz_offset)%86400/3600;
+      this->send_data[7] = (this->notify_data_time + this->tz_offset)%3600/60;
+      this->send_data[8] = (this->notify_data_time + this->tz_offset)%60;
       break;
     }
     case 0x6E:{
@@ -276,6 +320,17 @@ void SkyCoffee::send_power(bool state) {
     else
       this->coffee_state.wait_command = 0x04;
   }
+}
+
+void SkyCoffee::send_buzzer(bool state) {
+  if(state)
+    this->send_data[3] = 0x01;
+  else
+    this->send_data[3] = 0x00;
+  if(this->is_ready)
+    this->send_(0x3c);
+  else
+    this->coffee_state.wait_command = 0x3c;
 }
 
 void SkyCoffee::send_lock(bool state) {
