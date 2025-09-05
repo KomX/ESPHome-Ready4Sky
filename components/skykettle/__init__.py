@@ -170,8 +170,7 @@ CONFIG_SCHEMA = (
                 state_class=STATE_CLASS_MEASUREMENT,
                 unit_of_measurement="ml",
             ),
-            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema()
-            .extend(
+            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema().extend(
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
@@ -196,7 +195,7 @@ CONFIG_SCHEMA = (
               SkyKettleBeeperSwitch,
               icon = "mdi:volume-high",
             ),
-            cv.Optional(CONF_TARGET_TEMP): number.number_schema(
+            cv.Optional(CONF_TARGET_TEMP): number.number_schema().extend(
               {
                 cv.GenerateID(): cv.declare_id(SkyKettleTargetNumber),
                 cv.Optional(CONF_ICON, default="mdi:thermometer-lines"): cv.icon,
@@ -206,7 +205,7 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_NONE): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_BOIL_TIME_ADJ): number.number_schema(
+            cv.Optional(CONF_BOIL_TIME_ADJ): number.number_schema().extend(
               {
                 cv.GenerateID(): cv.declare_id(SkyKettleBoilTimeAdjNumber),
                 cv.Optional(CONF_ICON, default="mdi:timeline-clock"): cv.icon,
@@ -300,4 +299,5 @@ async def to_code(config):
       cg.add(numb.set_parent(var))
 
       cg.add(var.set_boil_time_adj(numb))
+
 
