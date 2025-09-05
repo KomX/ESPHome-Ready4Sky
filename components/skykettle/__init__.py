@@ -204,9 +204,8 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_NONE): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_BOIL_TIME_ADJ): number.number_schema().extend(
+            cv.Optional(CONF_BOIL_TIME_ADJ): number.number_schema(SkyKettleBoilTimeAdjNumber).extend(
               {
-                cv.GenerateID(): cv.declare_id(SkyKettleBoilTimeAdjNumber),
                 cv.Optional(CONF_ICON, default="mdi:timeline-clock"): cv.icon,
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='0'): cv.int_range(min=0, max=2),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_EMPTY): cv.string_strict,
@@ -298,6 +297,7 @@ async def to_code(config):
       cg.add(numb.set_parent(var))
 
       cg.add(var.set_boil_time_adj(numb))
+
 
 
 
