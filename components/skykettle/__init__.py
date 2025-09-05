@@ -195,9 +195,8 @@ CONFIG_SCHEMA = (
               SkyKettleBeeperSwitch,
               icon = "mdi:volume-high",
             ),
-            cv.Optional(CONF_TARGET_TEMP): number.number_schema().extend(
+            cv.Optional(CONF_TARGET_TEMP): number.number_schema(SkyKettleTargetNumber).extend(
               {
-                cv.GenerateID(): cv.declare_id(SkyKettleTargetNumber),
                 cv.Optional(CONF_ICON, default="mdi:thermometer-lines"): cv.icon,
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='0'): cv.int_range(min=0, max=2),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_CELSIUS): cv.string_strict,
@@ -299,5 +298,6 @@ async def to_code(config):
       cg.add(numb.set_parent(var))
 
       cg.add(var.set_boil_time_adj(numb))
+
 
 
