@@ -102,7 +102,7 @@ CONFIG_SCHEMA = (
       cv.Optional(CONF_INFORM): cv.All(
         cv.Schema(
           {
-            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema(
+            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema().extend(
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
@@ -127,11 +127,7 @@ CONFIG_SCHEMA = (
               SkyBakerPowerSwitch,
               icon = "mdi:cookie",
             ),
-            cv.Required(CONF_BAKING_MODE): select.select_schema(
-                {
-                    cv.GenerateID(): cv.declare_id(SkyBakerModeSelect),
-                }
-            ),
+            cv.Required(CONF_BAKING_MODE): select.select_schema(SkyBakerModeSelect),
             cv.Optional(CONF_POSTHEATING): switch.switch_schema(
               SkyBakerPostHeatSwitch,
               icon = "mdi:heat-wave",
@@ -140,9 +136,8 @@ CONFIG_SCHEMA = (
               SkyBakerDelaySwitch,
               icon = "mdi:progress-clock",
             ),
-            cv.Optional(CONF_TIMER_HOURS_SETTING): number.number_schema(
+            cv.Optional(CONF_TIMER_HOURS_SETTING): number.number_schema(SkyBakerTimerHoursNumber).extend(
               {
-                cv.GenerateID(): cv.declare_id(SkyBakerTimerHoursNumber),
                 cv.Optional(CONF_ICON, default="mdi:timer-settings"): cv.icon,
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='1'): cv.int_range(min=0, max=1),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_HOUR): cv.string_strict,
@@ -150,9 +145,8 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_TIMER_MINUTES_SETTING): number.number_schema(
+            cv.Optional(CONF_TIMER_MINUTES_SETTING): number.number_schema(SkyBakerTimerMinutesNumber).extend(
               {
-                cv.GenerateID(): cv.declare_id(SkyBakerTimerMinutesNumber),
                 cv.Optional(CONF_ICON, default="mdi:timer-settings"): cv.icon,
                 cv.Optional(CONF_ACCURACY_DECIMALS, default='1'): cv.int_range(min=0, max=1),
                 cv.Optional(CONF_UNIT_OF_MEASUREMENT, default=UNIT_MINUTE): cv.string_strict,
@@ -231,3 +225,4 @@ async def to_code(config):
 
 
     
+
