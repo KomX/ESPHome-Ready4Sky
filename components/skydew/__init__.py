@@ -194,7 +194,7 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 unit_of_measurement=UNIT_HOUR,
             ),
-            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.TEXT_SENSOR_SCHEMA.extend(
+            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema(
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
@@ -227,7 +227,7 @@ CONFIG_SCHEMA = cv.All(
               SkyDewWarmSteamSwitch,
               icon = "mdi:heat-wave",
             ),
-            cv.Optional(CONF_TARGET_HUMIDITY): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_TARGET_HUMIDITY): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyDewTargetHumidityNumber),
                 cv.Optional(CONF_ICON, default="mdi:cloud-percent"): cv.icon,
@@ -237,7 +237,7 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_STEAM_LEVEL): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_STEAM_LEVEL): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyDewSteamLevelNumber),
                 cv.Optional(CONF_ICON, default="mdi:soundcloud"): cv.icon,
@@ -247,7 +247,7 @@ CONFIG_SCHEMA = cv.All(
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_DEW_MODE): select.SELECT_SCHEMA.extend(
+            cv.Optional(CONF_DEW_MODE): select.select_schema(
               {
                   cv.GenerateID(): cv.declare_id(SkyDewModeSelect),
               }
@@ -338,4 +338,5 @@ async def to_code(config):
     conf = params[CONF_DEW_MODE]
     selct = cg.new_Pvariable(conf[CONF_ID], var)
     await select.register_select(selct, conf, options=omd)
+
     cg.add(var.set_mode(selct))
