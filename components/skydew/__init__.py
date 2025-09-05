@@ -1,7 +1,5 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.log import color, Fore
-from esphome.util import safe_print
 from esphome.components import(
   ready4sky,
   switch,
@@ -334,4 +332,5 @@ async def to_code(config):
     await select.register_select(selct, conf, options=omd)
 
     cg.add(var.set_mode(selct))
+
 
