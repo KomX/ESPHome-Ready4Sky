@@ -123,7 +123,7 @@ CONFIG_SCHEMA = (
               SkyHeatRememberSwitch,
               icon = "mdi:connection",
             ),
-            cv.Optional(CONF_TARGET_POWER): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_TARGET_POWER): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyHeatTargetPowerNumber),
                 cv.Optional(CONF_ICON, default="mdi:power-settings"): cv.icon,
@@ -133,7 +133,7 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_NONE): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_TARGET_TEMPERATURE): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_TARGET_TEMPERATURE): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyHeatTargetTemperatureNumber),
                 cv.Optional(CONF_ICON, default="mdi:thermometer-lines"): cv.icon,
@@ -198,3 +198,4 @@ async def to_code(config):
       numb = await number.new_number(params[CONF_TARGET_TEMPERATURE], min_value=10.0, max_value=35.0, step=1.0)
       cg.add(numb.set_parent(var))
       cg.add(var.set_target_temperature(numb))
+
