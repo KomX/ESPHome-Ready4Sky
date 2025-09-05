@@ -102,7 +102,7 @@ CONFIG_SCHEMA = (
       cv.Optional(CONF_INFORM): cv.All(
         cv.Schema(
           {
-            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.TEXT_SENSOR_SCHEMA.extend(
+            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema(
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
@@ -127,7 +127,7 @@ CONFIG_SCHEMA = (
               SkyBakerPowerSwitch,
               icon = "mdi:cookie",
             ),
-            cv.Required(CONF_BAKING_MODE): select.SELECT_SCHEMA.extend(
+            cv.Required(CONF_BAKING_MODE): select.select_schema(
                 {
                     cv.GenerateID(): cv.declare_id(SkyBakerModeSelect),
                 }
@@ -140,7 +140,7 @@ CONFIG_SCHEMA = (
               SkyBakerDelaySwitch,
               icon = "mdi:progress-clock",
             ),
-            cv.Optional(CONF_TIMER_HOURS_SETTING): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_TIMER_HOURS_SETTING): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyBakerTimerHoursNumber),
                 cv.Optional(CONF_ICON, default="mdi:timer-settings"): cv.icon,
@@ -150,7 +150,7 @@ CONFIG_SCHEMA = (
                 cv.Optional(CONF_ENTITY_CATEGORY, default=ENTITY_CATEGORY_CONFIG): cv.entity_category,
               }
             ),
-            cv.Optional(CONF_TIMER_MINUTES_SETTING): number.NUMBER_SCHEMA.extend(
+            cv.Optional(CONF_TIMER_MINUTES_SETTING): number.number_schema(
               {
                 cv.GenerateID(): cv.declare_id(SkyBakerTimerMinutesNumber),
                 cv.Optional(CONF_ICON, default="mdi:timer-settings"): cv.icon,
@@ -228,5 +228,6 @@ async def to_code(config):
     swtch = cg.new_Pvariable(conf[CONF_ID], var)
     await switch.register_switch(swtch, conf)
     cg.add(var.set_delayed_start(swtch))
+
 
     
