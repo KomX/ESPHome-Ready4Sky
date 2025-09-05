@@ -68,7 +68,7 @@ CONFIG_SCHEMA = (
                 state_class=STATE_CLASS_MEASUREMENT,
                 unit_of_measurement=UNIT_DECIBEL_MILLIWATT,
             ),
-            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.TEXT_SENSOR_SCHEMA.extend(
+            cv.Optional(CONF_STATUS_INDICATOR): text_sensor.text_sensor_schema(
               {
                 cv.GenerateID(): cv.declare_id(text_sensor.TextSensor),
                 cv.Optional(CONF_ICON, default=ICON_NEW_BOX): cv.icon,
@@ -126,4 +126,5 @@ async def to_code(config):
     swtch = cg.new_Pvariable(conf[CONF_ID], var)
     await switch.register_switch(swtch, conf)
     cg.add(var.set_safe_mode(swtch))
+
 
