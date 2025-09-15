@@ -81,7 +81,7 @@ MODEL_TYPE = {
   "RMC-M224S":  7,  "RFS-KMC001":   7,
   "RMC-M225S":  7,  "RMC-M225S-E":  7,
   "RMC-M226S":  7,  "RMC-M226S-E":  7,  "JK-MC501":   7,  "NK-MC10":  7,  
-  "RMC-M227S":  7,
+  "RMC-M227S":  7,  "RFS-KMC004":   7,
   "RMC-M800S":  0,
   "RMC-M903S":  5,  "RFS-KMC005":   5,
   "RMC-961S":   4,
@@ -528,4 +528,5 @@ async def to_code(config):
 
 
     
+
 
