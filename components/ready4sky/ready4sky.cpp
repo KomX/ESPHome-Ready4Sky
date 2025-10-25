@@ -300,7 +300,7 @@ void R4SEngine::gap_event_handler_( esp_gap_ble_cb_event_t event, esp_ble_gap_cb
                   nsd.name.c_str(), global_r4s_engine->address_str(nsd.address).c_str(), nsd.rssi);
           }
 //          if(global_r4s_engine->new_scan_dev_.size() > 3)
-            global_r4s_engine->new_scan_dev_.empty();
+            global_r4s_engine->new_scan_dev_.clear();
         }
         global_r4s_engine->start_scan();
         break;
@@ -640,3 +640,4 @@ std::string R4SDriver::uuid_to_string(esp_bt_uuid_t ud) {
 }  // namespace esphome
 
 #endif
+
