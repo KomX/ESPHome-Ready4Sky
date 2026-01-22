@@ -2,12 +2,16 @@
 
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/defines.h"
 #include "esphome/components/time/real_time_clock.h"
+
+#include <array>
+#include <span>
+#include <string>
+#include <vector>
 
 #ifdef USE_ESP32
 
-#include <string>
-#include <array>
 #include <esp_gap_ble_api.h>
 #include <esp_gatt_common_api.h>
 #include <esp_gattc_api.h>
@@ -144,4 +148,5 @@ extern R4SEngine *global_r4s_engine;
 }  // namespace esphome
 
 #endif
+
 
