@@ -1,11 +1,11 @@
-#ifdef USE_ESP32
-
+#include "ready4sky.h"
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/time.h"
-#include "ready4sky.h"
+
+#ifdef USE_ESP32
 
 #include <nvs_flash.h>
 #include <esp_bt_main.h>
@@ -640,4 +640,5 @@ std::string R4SDriver::uuid_to_string(esp_bt_uuid_t ud) {
 }  // namespace esphome
 
 #endif
+
 
