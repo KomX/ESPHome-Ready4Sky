@@ -9,6 +9,7 @@
 #include <string>
 #include <array>
 #include <esp_gap_ble_api.h>
+#include <esp_gatt_common_api.h>
 #include <esp_gattc_api.h>
 #include <esp_bt_defs.h>
 
@@ -143,3 +144,4 @@ extern R4SEngine *global_r4s_engine;
 }  // namespace esphome
 
 #endif
+
