@@ -127,9 +127,9 @@ def validate_control_parameters(config):
     if CONF_TEMPERATURE in prmi:
       npr = CONF_TEMPERATURE
   elif mdl == 2:
-    if CONF_WARM_STEAM in prms:
+    if CONF_WARM_STEAM in prmc:
       npr = CONF_WARM_STEAM
-    if CONF_DEW_MODE in prms:
+    if CONF_DEW_MODE in prmc:
       npr = CONF_DEW_MODE
     
   if not npr == "":
