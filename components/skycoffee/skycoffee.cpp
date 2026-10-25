@@ -179,17 +179,17 @@ void SkyCoffee::parse_response_(uint8_t *data, int8_t data_len, uint32_t timesta
       if(data[1] == this->cmd_count) {
         // получение времени наработки
         this->coffee_state.work_time = (data[5] + (data[6]<<8) + (data[7]<<16) + (data[8]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Work Time %d sec", this->mnf_model.c_str(), this->coffee_state.work_time);
+        ESP_LOGI(TAG, "%s INFO:   Work Time %ld sec", this->mnf_model.c_str(), this->coffee_state.work_time);
         if(this->work_time_ != nullptr)
           this->work_time_->publish_state(this->coffee_state.work_time / 3600);
         // получение потреблённой энергии
         this->coffee_state.energy = (data[9] + (data[10]<<8) + (data[11]<<16) + (data[12]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Energy %d Wh", this->mnf_model.c_str(), this->coffee_state.energy);
+        ESP_LOGI(TAG, "%s INFO:   Energy %ld Wh", this->mnf_model.c_str(), this->coffee_state.energy);
         if(this->energy_ != nullptr)
           this->energy_->publish_state(this->coffee_state.energy*0.001);
         // получение циклов включения
         this->coffee_state.work_cycles = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Work Cycles (47) %d", this->mnf_model.c_str(), this->coffee_state.work_cycles);
+        ESP_LOGI(TAG, "%s INFO:   Work Cycles (47) %ld", this->mnf_model.c_str(), this->coffee_state.work_cycles);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(this->coffee_state.work_cycles);
         this->send_(0x06);
