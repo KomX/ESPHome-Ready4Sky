@@ -278,17 +278,17 @@ void SkyDew::parse_response_(uint8_t *data, int8_t data_len, uint32_t timestamp)
       if(data[1] == this->cmd_count) {
         // получение времени наработки
         uint32_t val = (data[5] + (data[6]<<8) + (data[7]<<16) + (data[8]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Work Time %d sec", this->mnf_model.c_str(), val);
+        ESP_LOGI(TAG, "%s INFO:   Work Time %ld sec", this->mnf_model.c_str(), val);
         if(this->work_time_ != nullptr)
           this->work_time_->publish_state(val/3600);
         // получение циклов включения
         val = (data[13] + (data[14]<<8) + (data[15]<<16) + (data[16]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Work Cycles %d", this->mnf_model.c_str(), val);
+        ESP_LOGI(TAG, "%s INFO:   Work Cycles %ld", this->mnf_model.c_str(), val);
         if(this->work_cycles_ != nullptr)
           this->work_cycles_->publish_state(val);
         // получение потреблённой энергии
         val = (data[9] + (data[10]<<8) + (data[11]<<16) + (data[12]<<24));
-        ESP_LOGI(TAG, "%s INFO:   Energy %d Wh", this->mnf_model.c_str(), val);
+        ESP_LOGI(TAG, "%s INFO:   Energy %ld Wh", this->mnf_model.c_str(), val);
         if(this->energy_ != nullptr)
           this->energy_->publish_state((float)val*0.001);
         this->send_(0x06);
